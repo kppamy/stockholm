@@ -11,7 +11,7 @@ import re
 from pymongo import MongoClient
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
-
+from liteDB import *
 class Stockholm(object):
 
     def __init__(self, args):
@@ -168,6 +168,7 @@ class Stockholm(object):
         start = timeit.default_timer()
 
         all_quotes = []
+        all_stocks=[]
         
         all_quotes.append(self.sh000001)
         all_quotes.append(self.sz399001)
@@ -196,11 +197,15 @@ class Stockholm(object):
                     quote['Symbol'] = code
                     quote['Name'] = name
                     all_quotes.append(quote)
+                    stock=(code,name,'','','','')
+                    all_stocks.append(stock)
                 count += 1
         except Exception as e:
             print("Error: Failed to load all stock symbol..." + "\n")
             print(e)
-        
+        print("save to db:\n")
+       # print(all_stocks)
+        save_test('Stocks',all_stocks)
         print("load_all_quote_symbol end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return all_quotes
 
@@ -591,12 +596,21 @@ class Stockholm(object):
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
         print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
+        #print("all quotes sysbol: \n",all_quotes)
         all_quotes = all_quotes
+
         ## self.load_all_quote_info(all_quotes)
-        self.load_all_quote_data(all_quotes, start_date, end_date)
-        self.data_process(all_quotes)
+       # self.load_all_quote_data(all_quotes, start_date, end_date)
+       # print("all quotes data: \n",all_quotes)
+
+        #self.data_process(all_quotes)
         
-        self.data_export(all_quotes, output_types, None)
+        #self.data_export(all_quotes, output_types, None)
+
+    def save_quotes_DB(quote):
+        tmp=('','','','')
+        stock=quote+tmp
+        save_test('stocks',quotes)
 
     def data_test(self, target_date, test_range, output_types):
         ## loading test methods
@@ -657,7 +671,8 @@ class Stockholm(object):
             output_types.append("csv")
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
-            
+        
+        main()
         ## loading stock data
         if(self.reload_data == 'Y'):
             print("Start loading stock data...\n")

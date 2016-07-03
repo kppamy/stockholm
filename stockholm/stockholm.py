@@ -12,6 +12,9 @@ from pymongo import MongoClient
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 from liteDB import *
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 class Stockholm(object):
 
     def __init__(self, args):
@@ -210,7 +213,7 @@ class Stockholm(object):
         return all_quotes
 
     def load_quote_info(self, quote, is_retry):
-        print("load_quote_info start..." + "\n")
+        #print("load_quote_info start..." + "\n")
         
         start = timeit.default_timer()
 
@@ -243,7 +246,7 @@ class Stockholm(object):
                     load_quote_info(quote, True) ## retry once for network issue
             
         ## print(quote)
-        print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+        #print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return quote
 
     def load_all_quote_info(self, all_quotes):
@@ -251,8 +254,11 @@ class Stockholm(object):
         
         start = timeit.default_timer()
         for idx, quote in enumerate(all_quotes):
-            print("#" + str(idx + 1))
-            load_quote_info(quote, False)
+            print("#" + str(idx + 1),)
+            #load_quote_info(quote, False)
+            self.load_quote_info(quote,False)
+            if idx>10:
+                break
 
         print("load_all_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s")
         return all_quotes
@@ -592,75 +598,24 @@ class Stockholm(object):
             
         print("profit_test end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return results
+    def df_test(quotes):
+        df=[]
 
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
         print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
         #print("all quotes sysbol: \n",all_quotes)
-        all_quotes = all_quotes
+        some_quotes = all_quotes[0:5]
+        l=len(some_quotes)
+        self.load_all_quote_info(some_quotes)
+        print("all quotes info len : \n",l,some_quotes)
 
-        ## self.load_all_quote_info(all_quotes)
-       # self.load_all_quote_data(all_quotes, start_date, end_date)
-       # print("all quotes data: \n",all_quotes)
+        self.load_all_quote_data(some_quotes, start_date, end_date)
+        print("all quotes data: \n",some_quotes)
 
         #self.data_process(all_quotes)
         
         #self.data_export(all_quotes, output_types, None)
-
-    def save_quotes_DB(quote):
-        tmp=('','','','')
-        stock=quote+tmp
-        save_test('stocks',quotes)
-
-    def data_test(self, target_date, test_range, output_types):
-        ## loading test methods
-        methods = []
-        path = self.testfile_path
-        
-        ## from mongodb
-        if(path == 'mongodb'):
-            print("Load testing methods from Mongodb...\n")
-            client = MongoClient(self.mongo_url, self.mongo_port)
-            db = client[self.database_name]
-            col = db[self.collection_name]
-            q = None
-            if(len(self.methods) > 0):
-                applied_methods = list(map(int, self.methods.split(',')))
-                q = {"method_id": {"$in": applied_methods}}
-            for doc in col.find(q, ['name','desc','method']):
-                print(doc)
-                m = {'name': doc['name'], 'value_check': self.convert_value_check(doc['method'])}
-                methods.append(m)
-                
-        ## from test file
-        else:
-            if not os.path.exists(path):
-                print("Portfolio test file is not existed, testing is aborted...\n")
-                return
-            f = io.open(path, 'r', encoding='utf-8')
-            for line in f:
-                if(line.startswith('##') or len(line.strip()) == 0):
-                    continue
-                line = line.strip().strip('\n')
-                name = line[line.find('[')+1:line.find(']:')]
-                value = line[line.find(']:')+2:]
-                m = {'name': name, 'value_check': self.convert_value_check(value)}
-                methods.append(m)
-                
-        if(len(methods) == 0):
-            print("No method is loaded, testing is aborted...\n")
-            return
-
-        ## portfolio testing 
-        all_quotes = self.file_data_load()
-        target_date_time = datetime.datetime.strptime(target_date, "%Y-%m-%d")
-        for i in range(test_range):
-            date = (target_date_time - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
-            is_date_valid = self.check_date(all_quotes, date)
-            if is_date_valid:
-                selected_quotes = self.quote_pick(all_quotes, date, methods)
-                res = self.profit_test(selected_quotes, date)
-                self.data_export(res, output_types, 'result_' + date)
 
     def run(self):
         ## output types

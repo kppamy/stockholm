@@ -168,7 +168,7 @@ class Stockholm(object):
         start = timeit.default_timer()
 
         all_quotes = []
-        all_stocks=[]
+        #all_stocks=[]
         
         all_quotes.append(self.sh000001)
         all_quotes.append(self.sz399001)
@@ -198,14 +198,14 @@ class Stockholm(object):
                     quote['Name'] = name
                     all_quotes.append(quote)
                     stock=(code,name,'','','','')
-                    all_stocks.append(stock)
+                    #all_stocks.append(stock)
                 count += 1
         except Exception as e:
             print("Error: Failed to load all stock symbol..." + "\n")
             print(e)
         print("save to db:\n")
        # print(all_stocks)
-        save_test('Stocks',all_stocks)
+        #save_test('Stocks',all_stocks)
         print("load_all_quote_symbol end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return all_quotes
 
@@ -671,7 +671,7 @@ class Stockholm(object):
             output_types.append("csv")
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
-        
+        init() 
         main()
         ## loading stock data
         if(self.reload_data == 'Y'):

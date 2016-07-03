@@ -262,10 +262,11 @@ def save_test(table,data):
 #    conn = get_conn(DB_FILE_PATH)
 #    save(conn, save_sql, data)
 #
-def fetchall_test():
+def fetchall_test(table):
     '''查询所有数据...'''
     print('查询所有数据...')
-    fetchall_sql = '''SELECT * FROM '''+TABLE_NAME
+    #fetchall_sql = '''SELECT * FROM '''+table+''' WHERE code>'600000.SS' AND code<'600100.SS'  '''
+    fetchall_sql = '''SELECT * FROM '''+table
     conn = get_conn(DB_FILE_PATH)
     fetchall(conn, fetchall_sql)
 
@@ -323,7 +324,7 @@ def init():
 
 def main():
    init()
-   #fetchall_test()
+   #fetchall_test(TABLE_NAME)
    #print('#' * 50)
    #fetchone_test()
    #print('#' * 50)

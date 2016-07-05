@@ -1,10 +1,10 @@
-from stockholm import Stockholm
+from pydata import Pydata
 import option
 import os
 
 def checkFoldPermission(path):
-    if(path == 'USER_HOME/tmp/stockholm_export'):
-        path = os.path.expanduser('~') + '/tmp/stockholm_export'
+    if(path == 'USER_HOME/tmp/pydata_export'):
+        path = os.path.expanduser('~') + '/tmp/pydata_export'
     try:
         if not os.path.exists(path):
             os.makedirs(path)
@@ -26,7 +26,7 @@ def main():
         print('Please make sure you have the permission to save the data!\n')
     else:
         print('Stockholm is starting...\n')
-        stockh = Stockholm(args)
+        stockh = Pydata(args)
         stockh.run()
         print('Stockholm is done...\n')
 

@@ -15,7 +15,7 @@ from liteDB import *
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-class Stockholm(object):
+class Pydata(object):
 
     def __init__(self, args):
         ## flag of if need to reload all stock data
@@ -37,8 +37,8 @@ class Stockholm(object):
         ## thread number
         self.thread = args.thread
         ## data file store path
-        if(args.store_path == 'USER_HOME/tmp/stockholm_export'):
-            self.export_folder = os.path.expanduser('~') + '/tmp/stockholm_export'
+        if(args.store_path == 'USER_HOME/tmp/pydata_export'):
+            self.export_folder = os.path.expanduser('~') + '/tmp/pydata_export'
         else:
             self.export_folder = args.store_path
         ## portfolio testing file path
@@ -51,7 +51,7 @@ class Stockholm(object):
         ## for loading quote data
         self.yql_url = 'http://query.yahooapis.com/v1/public/yql'
         ## export file name
-        self.export_file_name = 'stockholm_export'
+        self.export_file_name = 'pydata_export'
 
         self.index_array = ['000001.SS', '399001.SZ', '000300.SS']
         self.sh000001 = {'Symbol': '000001.SS', 'Name': '上证指数'}

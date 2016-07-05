@@ -185,6 +185,10 @@ class Stockholm(object):
                 para_val = '[["hq","hs_a","",0,' + str(count) + ',500]]'
                 r_params = {'__s': para_val}
                 r = requests.get(self.all_quotes_url, params=r_params)
+                print("all Symbol jason:")
+                print(r.json()[0])
+                print(r.json()[1])
+                print(r.json()[2])
                 if(len(r.json()[0]['items']) == 0):
                     break
                 for item in r.json()[0]['items']:
@@ -200,7 +204,7 @@ class Stockholm(object):
                     quote['Symbol'] = code
                     quote['Name'] = name
                     all_quotes.append(quote)
-                    stock=(code,name,'','','','')
+                    #stock=(code,name,'','','','')
                     #all_stocks.append(stock)
                 count += 1
         except Exception as e:
@@ -224,6 +228,8 @@ class Stockholm(object):
             ## print(r.url)
             ## print(r.text)
             rjson = r.json()
+            print("print all quote info json: ")
+            print(rjson)
             try:
                 quote_info = rjson['query']['results']['quote']
                 quote['LastTradeDate'] = quote_info['LastTradeDate']
@@ -604,14 +610,14 @@ class Stockholm(object):
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
         print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
-        #print("all quotes sysbol: \n",all_quotes)
-        some_quotes = all_quotes[0:5]
+        print("all quotes sysbol: \n",all_quotes[0:10])
+        some_quotes = all_quotes[0:10]
         l=len(some_quotes)
         self.load_all_quote_info(some_quotes)
         print("all quotes info len : \n",l,some_quotes)
 
-        self.load_all_quote_data(some_quotes, start_date, end_date)
-        print("all quotes data: \n",some_quotes)
+        #self.load_all_quote_data(some_quotes, start_date, end_date)
+        #print("all quotes data: \n",some_quotes)
 
         #self.data_process(all_quotes)
         

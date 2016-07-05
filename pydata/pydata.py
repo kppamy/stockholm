@@ -185,10 +185,12 @@ class Pydata(object):
                 para_val = '[["hq","hs_a","",0,' + str(count) + ',500]]'
                 r_params = {'__s': para_val}
                 r = requests.get(self.all_quotes_url, params=r_params)
-                print("all Symbol jason:")
-                print(r.json()[0])
-                print(r.json()[1])
-                print(r.json()[2])
+                print("all Symbol jason:\n",r.json()[0]['fields'])
+                col=r.json()[0]['fields']
+                itm=r.json()[0]['items'][0:20]
+                df=pd.DataFrame(itm,columns=col)
+                #df.to_sql('MarketTip','DBAPI2')
+                print(df)
                 if(len(r.json()[0]['items']) == 0):
                     break
                 for item in r.json()[0]['items']:
@@ -610,11 +612,11 @@ class Pydata(object):
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
         print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
-        print("all quotes sysbol: \n",all_quotes[0:10])
-        some_quotes = all_quotes[0:10]
-        l=len(some_quotes)
-        self.load_all_quote_info(some_quotes)
-        print("all quotes info len : \n",l,some_quotes)
+        #print("all quotes sysbol: \n",all_quotes[0:10])
+        #some_quotes = all_quotes[0:10]
+        #l=len(some_quotes)
+        #self.load_all_quote_info(some_quotes)
+        #print("all quotes info len : \n",l,some_quotes)
 
         #self.load_all_quote_data(some_quotes, start_date, end_date)
         #print("all quotes data: \n",some_quotes)

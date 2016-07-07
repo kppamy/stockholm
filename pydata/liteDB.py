@@ -13,6 +13,8 @@
 
 import sqlite3
 import os
+from sqlalchemy import create_engine
+import pandas as pd
 '''SQLite数据库是一款非常小巧的嵌入式开源数据库软件，也就是说
 没有独立的维护进程，所有的维护都来自于程序本身。
 在python中，使用sqlite3创建数据库的连接，当我们指定的数据库文件不存在的时候
@@ -70,6 +72,19 @@ def get_conn(path):
         print('内存上面:[:memory:]')
         return sqlite3.connect(':memory:')
 
+def get_connPD(path):
+    if os.path.exists(path) and os.path.isfile(path):
+        print('硬盘上面:[{}]'.format(path))
+        engin=create_engine('sqlite:////home/chenay/python/Pydata/pydata'+path)
+        connPD=engin.connect()
+        return connPD
+    else:
+        engin=create_engine('sqlite://')
+        connPD=engin.connect()
+        print('内存上面:[:memory:]')
+        return connPD
+    
+    
 def get_cursor(conn):
     '''该方法是获取数据库的游标对象，参数为数据库的连接对象
     如果数据库的连接对象不为None，则返回数据库连接对象所创
@@ -270,6 +285,11 @@ def fetchall_test(table):
     conn = get_conn(DB_FILE_PATH)
     fetchall(conn, fetchall_sql)
 
+def fetchallPD(table):
+    conn=get_connPD(DB_FILE_PATH)
+    data=pd.read_sql_table(table,conn)
+    print(data)
+
 def fetchone_test():
     '''查询一条数据...'''
     print('查询一条数据...')
@@ -325,6 +345,7 @@ def init():
 def main():
    init()
    #fetchall_test(TABLE_NAME)
+   fetchallPD(TABLE_NAME)
    #print('#' * 50)
    #fetchone_test()
    #print('#' * 50)

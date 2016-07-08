@@ -8,7 +8,7 @@ import io
 import os
 import csv
 import re
-from pymongo import MongoClient
+#from pymongo import MongoClient
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 from liteDB import *
@@ -61,10 +61,11 @@ class Pydata(object):
         ## self.sz399006 = {'Symbol': '399006.SZ', 'Name': '创业板指'}
 
         ## mongodb info
-        self.mongo_url = 'localhost'
-        self.mongo_port = 27017
-        self.database_name = args.db_name
-        self.collection_name = 'testing_method'
+        #self.mongo_url = 'localhost'
+        #self.mongo_port = 27017
+        #self.database_name = args.db_name
+        #self.collection_name = 'testing_method'
+
         
     def get_columns(self, quote):
         columns = []
@@ -185,12 +186,10 @@ class Pydata(object):
                 para_val = '[["hq","hs_a","",0,' + str(count) + ',500]]'
                 r_params = {'__s': para_val}
                 r = requests.get(self.all_quotes_url, params=r_params)
-                print("all Symbol jason:\n",r.json()[0]['fields'])
+                #print("all Symbol jason:\n",r.json()[0]['fields'])
                 col=r.json()[0]['fields']
-                itm=r.json()[0]['items'][0:20]
-                df=pd.DataFrame(itm,columns=col)
-                #df.to_sql('MarketTip','DBAPI2')
-                print(df)
+                itm=r.json()[0]['items']
+                self.allInOne=pd.DataFrame(itm,columns=col)
                 if(len(r.json()[0]['items']) == 0):
                     break
                 for item in r.json()[0]['items']:
@@ -460,8 +459,8 @@ class Pydata(object):
                             print(e)
                             print("write csv error: " + quote)
             
-        if('mongo' in export_type_array):
-            print("start export to MongoDB...\n")
+        #if('mongo' in export_type_array):
+        #    print("start export to MongoDB...\n")
             
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
@@ -606,12 +605,14 @@ class Pydata(object):
             
         print("profit_test end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return results
-    def df_test(quotes):
-        df=[]
 
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
         print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
+        init()
+        print("all in one:**********************************\n")
+        print(self.allInOne)
+        #writeSqlPD(self.allInOne,'AllInOne')
         #print("all quotes sysbol: \n",all_quotes[0:10])
         #some_quotes = all_quotes[0:10]
         #l=len(some_quotes)

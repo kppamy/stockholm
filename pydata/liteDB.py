@@ -72,17 +72,17 @@ def get_conn(path):
         print('内存上面:[:memory:]')
         return sqlite3.connect(':memory:')
 
-def get_connPD(path):
+def get_enginePD(path):
     if os.path.exists(path) and os.path.isfile(path):
         print('硬盘上面:[{}]'.format(path))
-        engin=create_engine('sqlite:////home/chenay/python/Pydata/pydata'+path)
-        connPD=engin.connect()
-        return connPD
+        enginePD=create_engine('sqlite:////home/chenay/python/pydata/pydata/'+path)
+        #onnPD=enginePD.connect()
+        return enginePD
     else:
-        engin=create_engine('sqlite://')
-        connPD=engin.connect()
+        enginePD=create_engine('sqlite://')
+        #connPD=enginePD.connect()
         print('内存上面:[:memory:]')
-        return connPD
+        return enginePD
     
     
 def get_cursor(conn):
@@ -125,7 +125,8 @@ def create_table(conn, sql):
         close_all(conn, cu)
     else:
         print('the [{}] is empty or equal None!'.format(sql))
-
+def writeSqlPD(dfdata,table):
+    dfdata.to_sql(table,enginePD)
 ###############################################################
 ####            创建|删除表操作     END
 ###############################################################
@@ -286,9 +287,8 @@ def fetchall_test(table):
     fetchall(conn, fetchall_sql)
 
 def fetchallPD(table):
-    conn=get_connPD(DB_FILE_PATH)
-    data=pd.read_sql_table(table,conn)
-    print(data)
+    stocks=pd.read_sql_table(table,dbConnPD)
+    print(stocks)
 
 def fetchone_test():
     '''查询一条数据...'''
@@ -340,12 +340,18 @@ def init():
     #向数据库表中插入数据
     #save_test()
     #save_test(TABLE_NAME,data)
+
+    # use pandas sqlite API to store the data
+    global enginePD
+    enginePD=get_enginePD(DB_FILE_PATH)
+    global dbConnPD
+    dbConnPD=enginePD.connect()
     
 
 def main():
    init()
    #fetchall_test(TABLE_NAME)
-   fetchallPD(TABLE_NAME)
+   fetchallPD("AllInOne")
    #print('#' * 50)
    #fetchone_test()
    #print('#' * 50)

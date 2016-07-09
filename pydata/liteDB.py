@@ -75,7 +75,7 @@ def get_conn(path):
 def get_enginePD(path):
     if os.path.exists(path) and os.path.isfile(path):
         print('硬盘上面:[{}]'.format(path))
-        enginePD=create_engine('sqlite:////home/chenay/python/pydata/pydata/'+path)
+        enginePD=create_engine('sqlite:////home/cay/programs/pydata/pydata/'+path)
         #onnPD=enginePD.connect()
         return enginePD
     else:
@@ -126,7 +126,7 @@ def create_table(conn, sql):
     else:
         print('the [{}] is empty or equal None!'.format(sql))
 def writeSqlPD(dfdata,table):
-    dfdata.to_sql(table,enginePD)
+    dfdata.to_sql(table,enginePD,if_exists='replace')
 ###############################################################
 ####            创建|删除表操作     END
 ###############################################################
@@ -287,8 +287,9 @@ def fetchall_test(table):
     fetchall(conn, fetchall_sql)
 
 def fetchallPD(table):
-    stocks=pd.read_sql_table(table,dbConnPD)
-    print(stocks)
+    #stocks=pd.read_sql_table(table,dbConnPD)
+    stocks=pd.read_sql(table,dbConnPD)
+    print(stocks,)
 
 def fetchone_test():
     '''查询一条数据...'''
@@ -351,7 +352,7 @@ def init():
 def main():
    init()
    #fetchall_test(TABLE_NAME)
-   fetchallPD("AllInOne")
+   fetchallPD("SELECT * FROM '000001.SS' order by 'Volume' DESC")
    #print('#' * 50)
    #fetchone_test()
    #print('#' * 50)

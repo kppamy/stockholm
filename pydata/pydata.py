@@ -65,7 +65,9 @@ class Pydata(object):
         #self.mongo_port = 27017
         #self.database_name = args.db_name
         #self.collection_name = 'testing_method'
-
+        
+        self.all_quotes_info=[]
+        self.all_quotes_data=[]
         
     def get_columns(self, quote):
         columns = []
@@ -189,7 +191,10 @@ class Pydata(object):
                 #print("all Symbol jason:\n",r.json()[0]['fields'])
                 col=r.json()[0]['fields']
                 itm=r.json()[0]['items']
-                self.allInOne=pd.DataFrame(itm,columns=col)
+                if(count == 1):
+                    self.allInOne=pd.DataFrame(itm,columns=col)
+                else:
+                    self.allInOne=self.allInOne.append(pd.DataFrame(itm,columns=col))
                 if(len(r.json()[0]['items']) == 0):
                     break
                 for item in r.json()[0]['items']:
@@ -229,8 +234,6 @@ class Pydata(object):
             ## print(r.url)
             ## print(r.text)
             rjson = r.json()
-            print("print all quote info json: ")
-            print(rjson)
             try:
                 quote_info = rjson['query']['results']['quote']
                 quote['LastTradeDate'] = quote_info['LastTradeDate']
@@ -244,7 +247,10 @@ class Pydata(object):
                 quote['Volume'] = quote_info['Volume']
                 quote['MarketCap'] = quote_info['MarketCapitalization']
                 quote['StockExchange'] = quote_info['StockExchange']
-                
+                quote['BookValue'] = quote_info['BookValue']
+                quote['YearHigh'] = quote_info['YearHigh']
+                quote['YearLow'] = quote_info['YearLow']
+                self.all_quotes_info.append(quote)
             except Exception as e:
                 print("Error: Failed to load stock info... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
                 print(e + "\n")
@@ -252,7 +258,7 @@ class Pydata(object):
                     time.sleep(1)
                     load_quote_info(quote, True) ## retry once for network issue
             
-        ## print(quote)
+        #print(quote)
         #print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return quote
 
@@ -262,7 +268,6 @@ class Pydata(object):
         start = timeit.default_timer()
         for idx, quote in enumerate(all_quotes):
             print("#" + str(idx + 1),)
-            #load_quote_info(quote, False)
             self.load_quote_info(quote,False)
             if idx>10:
                 break
@@ -283,25 +288,30 @@ class Pydata(object):
                 ## print(r.url)
                 ## print(r.text)
                 rjson = r.json()
+                #print("quote data rjson\n",rjson)
                 quote_data = rjson['query']['results']['quote']
                 quote_data.reverse()
                 quote['Data'] = quote_data
+                #df=pd.DataFrame(quote_data)
+                #print("quote data Volume \n",quote_data['Volume'])
                 if(not is_retry):
                     counter.append(1)          
                 
-            except:
+            #except Exception as e:
+            except  :
                 print("Error: Failed to load stock data... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
+               #print(e+"\n")
                 if(not is_retry):
                     time.sleep(2)
                     self.load_quote_data(quote, start_date, end_date, True, counter) ## retry once for network issue
         
-            print("load_quote_data " + quote['Symbol'] + "/" + quote['Name'] + " end..." + "\n")
+            #print("load_quote_data " + quote['Symbol'] + "/" + quote['Name'] + " end..." + "\n")
             ## print("time cost: " + str(round(timeit.default_timer() - start)) + "s." + "\n")
             ## print("total count: " + str(len(counter)) + "\n")
         return quote
 
     def load_all_quote_data(self, all_quotes, start_date, end_date):
-        print("load_all_quote_data start..." + "\n")
+        print("load_all_quote_data start...start:%s , end:%s,\n"%(start_date,end_date))
         
         start = timeit.default_timer()
 
@@ -314,6 +324,23 @@ class Pydata(object):
 
         print("load_all_quote_data end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return all_quotes
+
+    def data_save(self,all_quotes):
+        #df=pd.DataFrame(all_quotes)
+        #print("Stocks to be saved to DB: \n",df)
+        count=1
+        for quote in all_quotes:
+            if ('Data' in quote and 'Symbol' in quote):
+                df=pd.DataFrame(quote['Data'])
+                self.all_quotes_data.append(df)
+                print("stock ",quote['Symbol']," save to db")
+                #print("stock dataframe type:",df.dtypes)
+                #print("stock Volume:\n",df['Volume'])
+                #print("stocks volume not null : \n",df.dropna(axis=1,how='all'))
+                #writeSqlPD(df,quote['Symbol'])
+                count=count+1
+            if(count==2):
+                break
 
     def data_process(self, all_quotes):
         print("data_process start..." + "\n")
@@ -608,20 +635,21 @@ class Pydata(object):
 
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
-        print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
+        #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
         init()
-        print("all in one:**********************************\n")
-        print(self.allInOne)
-        #writeSqlPD(self.allInOne,'AllInOne')
-        #print("all quotes sysbol: \n",all_quotes[0:10])
-        #some_quotes = all_quotes[0:10]
-        #l=len(some_quotes)
-        #self.load_all_quote_info(some_quotes)
-        #print("all quotes info len : \n",l,some_quotes)
-
-        #self.load_all_quote_data(some_quotes, start_date, end_date)
-        #print("all quotes data: \n",some_quotes)
-
+        #print("all in one:**********************************\n")
+        #print(self.allInOne[0:5])
+        #writeSqlPD(self.allInOne,'MKTNewest')
+        #print("all quotes symbol: \n",all_quotes[0:10])
+        some_quotes = all_quotes[0:5]
+        self.load_all_quote_info(some_quotes)
+        #qi=pd.DataFrame(self.all_quotes_info)
+        #print("all quotes info len : \n",qi.dropna(axis=1,how='all'))
+        #print("all quotes info len : \n",qi)
+        self.load_all_quote_data(some_quotes, start_date, end_date)
+        self.data_save(some_quotes)
+        #qd=pd.DataFrame(some_quotes)
+        print("all quotes data: \n",self.all_quotes_data)
         #self.data_process(all_quotes)
         
         #self.data_export(all_quotes, output_types, None)
@@ -635,11 +663,10 @@ class Pydata(object):
             output_types.append("csv")
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
-        init() 
-        main()
+        #init() 
+        #main()
         ## loading stock data
         if(self.reload_data == 'Y'):
-            print("Start loading stock data...\n")
             self.data_load(self.start_date, self.end_date, output_types)
             
         ## test & generate portfolio

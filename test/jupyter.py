@@ -9,10 +9,9 @@ from pandas_datareader import data, wb
 from pandas import Series, DataFrame
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-mpl.use('Agg')
+#mpl.use('Agg')
 
 display(HTML("<iframe src=http://pandas.pydata.org width=800 height=350></iframe>"))
-
 print("pandas version: \n",pd.__version__)
 
 mpl.rc('figure', figsize=(8, 7))
@@ -38,7 +37,7 @@ ts = df['Close'][-10:]
 print("close price in last 10 days: \n",ts)
 close_px = df['Adj Close']
 mavg = pd.rolling_mean(close_px, 40)
-print("rolling mean of 40 days: \n ",mavg)
+#print("rolling mean of 40 days: \n ",mavg)
 
 #rets = close_px / close_px.shift(1) - 1
 #print("close prince change in percent: \n",rets)
@@ -47,4 +46,5 @@ print("close prince change in percent by pct_change(): \n",close_px.pct_change()
 close_px.plot(label='AAPL')
 mavg.plot(label='mavg')
 plt.legend()
-
+plt.show()
+#plt.savefig('MyFig.jpg')  

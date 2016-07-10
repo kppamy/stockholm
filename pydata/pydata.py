@@ -269,8 +269,6 @@ class Pydata(object):
         for idx, quote in enumerate(all_quotes):
             print("#" + str(idx + 1),)
             self.load_quote_info(quote,False)
-            if idx>10:
-                break
 
         print("load_all_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s")
         return all_quotes
@@ -301,6 +299,7 @@ class Pydata(object):
             except  :
                 print("Error: Failed to load stock data... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
                #print(e+"\n")
+                is_retry=True
                 if(not is_retry):
                     time.sleep(2)
                     self.load_quote_data(quote, start_date, end_date, True, counter) ## retry once for network issue
@@ -328,19 +327,17 @@ class Pydata(object):
     def data_save(self,all_quotes):
         #df=pd.DataFrame(all_quotes)
         #print("Stocks to be saved to DB: \n",df)
-        count=1
+        #count=1
         for quote in all_quotes:
             if ('Data' in quote and 'Symbol' in quote):
                 df=pd.DataFrame(quote['Data'])
                 self.all_quotes_data.append(df)
                 print("stock ",quote['Symbol']," save to db")
-                #print("stock dataframe type:",df.dtypes)
-                #print("stock Volume:\n",df['Volume'])
-                #print("stocks volume not null : \n",df.dropna(axis=1,how='all'))
-                #writeSqlPD(df,quote['Symbol'])
-                count=count+1
-            if(count==2):
-                break
+                self.convert_onestock_dtype(df)
+                writeSqlPD(df,quote['Symbol'])
+                #count=count+1
+            #if(count==5):
+            #    break
 
     def data_process(self, all_quotes):
         print("data_process start..." + "\n")
@@ -632,25 +629,40 @@ class Pydata(object):
             
         print("profit_test end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return results
+    
+    def convert_allinone_dtyp(self):
+        #print("all in one: dtypes before**********************************\n",self.allInOne.dtypes)
+        self.allInOne['code']=self.allInOne['code'].astype('int')
+        self.allInOne['name']=self.allInOne['name'].astype('str')
+        self.allInOne['ticktime']=pd.to_datetime(self.allInOne['ticktime'])
+        self.allInOne[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']]=self.allInOne[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']].astype('float')
+        #print("all in one after ajust the dtypes:\n",self.allInOne.dtypes)
+
+    def convert_onestock_dtype(self,quote):
+       #print("single stock dtype before adjusting:\n",quote.dtypes)
+        quote[['Adj_Close','Close','High','Low','Open','Volume']]= quote[['Adj_Close','Close','High','Low','Open','Volume']].astype('float')
+        quote['Date']=pd.to_datetime(quote['Date'])
+       #print("single stock dtype after adjusting:\n",quote.dtypes)
 
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
         #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
         init()
-        #print("all in one:**********************************\n")
-        #print(self.allInOne[0:5])
+        #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
         #print("all quotes symbol: \n",all_quotes[0:10])
-        some_quotes = all_quotes[0:5]
+        some_quotes = all_quotes
         self.load_all_quote_info(some_quotes)
         #qi=pd.DataFrame(self.all_quotes_info)
         #print("all quotes info len : \n",qi.dropna(axis=1,how='all'))
         #print("all quotes info len : \n",qi)
         self.load_all_quote_data(some_quotes, start_date, end_date)
         self.data_save(some_quotes)
-        #qd=pd.DataFrame(some_quotes)
-        print("all quotes data: \n",self.all_quotes_data)
-        #self.data_process(all_quotes)
+        #qd=pd.DataFrame(self.all_quotes_data)
+       # self.all_quotes_data.to_csv("alldata.csv")
+       # self.all_quotes_data=pd.read_csv('alldata.csv',index_col='Date',parse_dates=True)
+        #print("all quotes data: \n",self.all_quotes_data)
+        ##self.data_process(all_quotes)
         
         #self.data_export(all_quotes, output_types, None)
 

@@ -75,7 +75,7 @@ def get_conn(path):
 def get_enginePD(path):
     if os.path.exists(path) and os.path.isfile(path):
         print('硬盘上面:[{}]'.format(path))
-        enginePD=create_engine('sqlite:////home/cay/python/pydata/pydata/'+path)
+        enginePD=create_engine('sqlite:///'+os.path.expanduser('~')+'/python/pydata/pydata/'+path)
         #onnPD=enginePD.connect()
         return enginePD
     else:

@@ -11,11 +11,8 @@ import re
 #from pymongo import MongoClient
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
-from liteDB import *
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-class Pydata(object):
+
+class Stockholm(object):
 
     def __init__(self, args):
         ## flag of if need to reload all stock data
@@ -37,8 +34,8 @@ class Pydata(object):
         ## thread number
         self.thread = args.thread
         ## data file store path
-        if(args.store_path == 'USER_HOME/tmp/pydata_export'):
-            self.export_folder = os.path.expanduser('~') + '/tmp/pydata_export'
+        if(args.store_path == 'USER_HOME/tmp/stockholm_export'):
+            self.export_folder = os.path.expanduser('~') + '/tmp/stockholm_export'
         else:
             self.export_folder = args.store_path
         ## portfolio testing file path
@@ -51,7 +48,7 @@ class Pydata(object):
         ## for loading quote data
         self.yql_url = 'http://query.yahooapis.com/v1/public/yql'
         ## export file name
-        self.export_file_name = 'pydata_export'
+        self.export_file_name = 'stockholm_export'
 
         self.index_array = ['000001.SS', '399001.SZ', '000300.SS']
         self.sh000001 = {'Symbol': '000001.SS', 'Name': '上证指数'}
@@ -61,13 +58,10 @@ class Pydata(object):
         ## self.sz399006 = {'Symbol': '399006.SZ', 'Name': '创业板指'}
 
         ## mongodb info
-        #self.mongo_url = 'localhost'
-        #self.mongo_port = 27017
-        #self.database_name = args.db_name
-        #self.collection_name = 'testing_method'
-        
-        self.all_quotes_info=[]
-        self.all_quotes_data=[]
+        self.mongo_url = 'localhost'
+        self.mongo_port = 27017
+        self.database_name = args.db_name
+        self.collection_name = 'testing_method'
         
     def get_columns(self, quote):
         columns = []
@@ -174,7 +168,6 @@ class Pydata(object):
         start = timeit.default_timer()
 
         all_quotes = []
-        #all_stocks=[]
         
         all_quotes.append(self.sh000001)
         all_quotes.append(self.sz399001)
@@ -188,13 +181,6 @@ class Pydata(object):
                 para_val = '[["hq","hs_a","",0,' + str(count) + ',500]]'
                 r_params = {'__s': para_val}
                 r = requests.get(self.all_quotes_url, params=r_params)
-                #print("all Symbol jason:\n",r.json()[0]['fields'])
-                col=r.json()[0]['fields']
-                itm=r.json()[0]['items']
-                if(count == 1):
-                    self.allInOne=pd.DataFrame(itm,columns=col)
-                else:
-                    self.allInOne=self.allInOne.append(pd.DataFrame(itm,columns=col))
                 if(len(r.json()[0]['items']) == 0):
                     break
                 for item in r.json()[0]['items']:
@@ -214,11 +200,12 @@ class Pydata(object):
         except Exception as e:
             print("Error: Failed to load all stock symbol..." + "\n")
             print(e)
+        
         print("load_all_quote_symbol end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return all_quotes
 
     def load_quote_info(self, quote, is_retry):
-        #print("load_quote_info start..." + "\n")
+        print("load_quote_info start..." + "\n")
         
         start = timeit.default_timer()
 
@@ -242,10 +229,7 @@ class Pydata(object):
                 quote['Volume'] = quote_info['Volume']
                 quote['MarketCap'] = quote_info['MarketCapitalization']
                 quote['StockExchange'] = quote_info['StockExchange']
-                quote['BookValue'] = quote_info['BookValue']
-                quote['YearHigh'] = quote_info['YearHigh']
-                quote['YearLow'] = quote_info['YearLow']
-                self.all_quotes_info.append(quote)
+                
             except Exception as e:
                 print("Error: Failed to load stock info... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
                 print(e + "\n")
@@ -253,8 +237,8 @@ class Pydata(object):
                     time.sleep(1)
                     load_quote_info(quote, True) ## retry once for network issue
             
-        #print(quote)
-        #print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+        ## print(quote)
+        print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return quote
 
     def load_all_quote_info(self, all_quotes):
@@ -262,8 +246,8 @@ class Pydata(object):
         
         start = timeit.default_timer()
         for idx, quote in enumerate(all_quotes):
-            print("#" + str(idx + 1),)
-            self.load_quote_info(quote,False)
+            print("#" + str(idx + 1))
+            load_quote_info(quote, False)
 
         print("load_all_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s")
         return all_quotes
@@ -281,7 +265,6 @@ class Pydata(object):
                 ## print(r.url)
                 ## print(r.text)
                 rjson = r.json()
-                #print("quote data rjson\n",rjson)
                 quote_data = rjson['query']['results']['quote']
                 quote_data.reverse()
                 quote['Data'] = quote_data
@@ -294,18 +277,18 @@ class Pydata(object):
                     time.sleep(2)
                     self.load_quote_data(quote, start_date, end_date, True, counter) ## retry once for network issue
         
-            #print("load_quote_data " + quote['Symbol'] + "/" + quote['Name'] + " end..." + "\n")
+            print("load_quote_data " + quote['Symbol'] + "/" + quote['Name'] + " end..." + "\n")
             ## print("time cost: " + str(round(timeit.default_timer() - start)) + "s." + "\n")
             ## print("total count: " + str(len(counter)) + "\n")
         return quote
 
     def load_all_quote_data(self, all_quotes, start_date, end_date):
-        print("load_all_quote_data start...start:%s , end:%s,\n"%(start_date,end_date))
+        print("load_all_quote_data start..." + "\n")
         
         start = timeit.default_timer()
 
         counter = []
-        mapfunc = partial(self.load_quote_data, start_date=start_date, end_date=end_date, is_retry=True, counter=counter)
+        mapfunc = partial(self.load_quote_data, start_date=start_date, end_date=end_date, is_retry=False, counter=counter)
         pool = ThreadPool(self.thread)
         pool.map(mapfunc, all_quotes) ## multi-threads executing
         pool.close() 
@@ -313,21 +296,6 @@ class Pydata(object):
 
         print("load_all_quote_data end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return all_quotes
-
-    def data_save(self,all_quotes):
-        #df=pd.DataFrame(all_quotes)
-        #print("Stocks to be saved to DB: \n",df)
-        #count=1
-        for quote in all_quotes:
-            if ('Data' in quote and 'Symbol' in quote):
-                df=pd.DataFrame(quote['Data'])
-                self.all_quotes_data.append(df)
-                print("stock ",quote['Symbol']," save to db")
-                self.convert_onestock_dtype(df)
-                writeSqlPD(df,quote['Symbol'])
-                #count=count+1
-            #if(count==5):
-            #    break
 
     def data_process(self, all_quotes):
         print("data_process start..." + "\n")
@@ -473,8 +441,8 @@ class Pydata(object):
                             print(e)
                             print("write csv error: " + quote)
             
-        #if('mongo' in export_type_array):
-        #    print("start export to MongoDB...\n")
+        if('mongo' in export_type_array):
+            print("start export to MongoDB...\n")
             
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
@@ -619,42 +587,66 @@ class Pydata(object):
             
         print("profit_test end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return results
-    
-    def convert_allinone_dtyp(self):
-        #print("all in one: dtypes before**********************************\n",self.allInOne.dtypes)
-        self.allInOne['code']=self.allInOne['code'].astype('int')
-        self.allInOne['name']=self.allInOne['name'].astype('str')
-        self.allInOne['ticktime']=pd.to_datetime(self.allInOne['ticktime'])
-        self.allInOne[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']]=self.allInOne[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']].astype('float')
-        #print("all in one after ajust the dtypes:\n",self.allInOne.dtypes)
-
-    def convert_onestock_dtype(self,quote):
-       #print("single stock dtype before adjusting:\n",quote.dtypes)
-        quote[['Adj_Close','Close','High','Low','Open','Volume']]= quote[['Adj_Close','Close','High','Low','Open','Volume']].astype('float')
-        quote['Date']=pd.to_datetime(quote['Date'])
-       #print("single stock dtype after adjusting:\n",quote.dtypes)
 
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
-        #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
-        #init()
-        #self.convert_allinone_dtyp()
-        #writeSqlPD(self.allInOne,'MKTNewest')
-        #print("all quotes symbol: \n",all_quotes[0:10])
-        some_quotes = all_quotes[0:20]
-        #self.load_all_quote_info(some_quotes)
-        #qi=pd.DataFrame(self.all_quotes_info)
-        #print("all quotes info len : \n",qi.dropna(axis=1,how='all'))
-        #print("all quotes info len : \n",qi)
-        self.load_all_quote_data(some_quotes, start_date, end_date)
-        self.data_save(some_quotes)
-        #qd=pd.DataFrame(self.all_quotes_data)
-       # self.all_quotes_data.to_csv("alldata.csv")
-       # self.all_quotes_data=pd.read_csv('alldata.csv',index_col='Date',parse_dates=True)
-        #print("all quotes data: \n",self.all_quotes_data)
-        ##self.data_process(all_quotes)
+        print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
+        all_quotes = all_quotes
+        ## self.load_all_quote_info(all_quotes)
+        self.load_all_quote_data(all_quotes, start_date, end_date)
+        self.data_process(all_quotes)
         
-        #self.data_export(all_quotes, output_types, None)
+        self.data_export(all_quotes, output_types, None)
+
+    def data_test(self, target_date, test_range, output_types):
+        ## loading test methods
+        methods = []
+        path = self.testfile_path
+        
+        ## from mongodb
+        if(path == 'mongodb'):
+            print("Load testing methods from Mongodb...\n")
+            client = MongoClient(self.mongo_url, self.mongo_port)
+            db = client[self.database_name]
+            col = db[self.collection_name]
+            q = None
+            if(len(self.methods) > 0):
+                applied_methods = list(map(int, self.methods.split(',')))
+                q = {"method_id": {"$in": applied_methods}}
+            for doc in col.find(q, ['name','desc','method']):
+                print(doc)
+                m = {'name': doc['name'], 'value_check': self.convert_value_check(doc['method'])}
+                methods.append(m)
+                
+        ## from test file
+        else:
+            if not os.path.exists(path):
+                print("Portfolio test file is not existed, testing is aborted...\n")
+                return
+            f = io.open(path, 'r', encoding='utf-8')
+            for line in f:
+                if(line.startswith('##') or len(line.strip()) == 0):
+                    continue
+                line = line.strip().strip('\n')
+                name = line[line.find('[')+1:line.find(']:')]
+                value = line[line.find(']:')+2:]
+                m = {'name': name, 'value_check': self.convert_value_check(value)}
+                methods.append(m)
+                
+        if(len(methods) == 0):
+            print("No method is loaded, testing is aborted...\n")
+            return
+
+        ## portfolio testing 
+        all_quotes = self.file_data_load()
+        target_date_time = datetime.datetime.strptime(target_date, "%Y-%m-%d")
+        for i in range(test_range):
+            date = (target_date_time - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
+            is_date_valid = self.check_date(all_quotes, date)
+            if is_date_valid:
+                selected_quotes = self.quote_pick(all_quotes, date, methods)
+                res = self.profit_test(selected_quotes, date)
+                self.data_export(res, output_types, 'result_' + date)
 
     def run(self):
         ## output types
@@ -665,10 +657,10 @@ class Pydata(object):
             output_types.append("csv")
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
-        init() 
-        #main()
+            
         ## loading stock data
         if(self.reload_data == 'Y'):
+            print("Start loading stock data...\n")
             self.data_load(self.start_date, self.end_date, output_types)
             
         ## test & generate portfolio

@@ -324,7 +324,8 @@ class Pydata(object):
                 self.all_quotes_data.append(df)
                 print("stock ",quote['Symbol']," save to db")
                 self.convert_onestock_dtype(df)
-                writeSqlPD(df,quote['Symbol'])
+                #writeSqlPD(df,quote['Symbol'])
+                updateSqlPD(df,quote['Symbol'])
                 count=count+1
             #if(count==5):
             #    break
@@ -337,7 +338,9 @@ class Pydata(object):
             self.all_quotes_data.append(df)
             print("stock ",quote['Symbol']," save to db")
             self.convert_onestock_dtype(df)
-            writeSqlPD(df,quote['Symbol'])
+            #writeSqlPD(df,quote['Symbol'])
+            updateSqlPD(df,quote['Symbol'])
+
 
     def data_process(self, all_quotes):
         print("data_process start..." + "\n")
@@ -441,6 +444,17 @@ class Pydata(object):
                     print(quote)
 
         print("data_process end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+
+    def data_import(self, all_quotes, export_type_array, file_name):
+        start = timeit.default_timer()
+        directory = self.export_folder
+        if(file_name is None):
+            file_name = self.export_file_name
+        alldata=pd.read_csv(directory + '/' + file_name + '.csv')
+        grp=alldata.groupby('Symbol').groups.keys()
+        print('grouped data first: \n',grp)
+        #print('grouped data last: \n',grp.last())
+        print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def data_export(self, all_quotes, export_type_array, file_name):
         
@@ -646,26 +660,27 @@ class Pydata(object):
        #print("single stock dtype after adjusting:\n",quote.dtypes)
 
     def data_load(self, start_date, end_date, output_types):
-        all_quotes = self.load_all_quote_symbol()
-        print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
+        #all_quotes = self.load_all_quote_symbol()
+        #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
         #print("all quotes symbol: \n",all_quotes[0:10])
-        some_quotes = all_quotes
-        #some_quotes = all_quotes[0:40]
+        #some_quotes = all_quotes
+        #some_quotes = all_quotes[0:10]
         #self.load_all_quote_info(some_quotes)
         #qi=pd.DataFrame(self.all_quotes_info)
         #print("all quotes info len : \n",qi.dropna(axis=1,how='all'))
         #print("all quotes info len : \n",qi)
-        self.load_all_quote_data(some_quotes, start_date, end_date)
+        #self.load_all_quote_data(some_quotes, start_date, end_date)
         #self.data_save(some_quotes)
         #qd=pd.DataFrame(self.all_quotes_data)
        # self.all_quotes_data.to_csv("alldata.csv")
-       # self.all_quotes_data=pd.read_csv('alldata.csv',index_col='Date',parse_dates=True)
-        #print("all quotes data: \n",self.all_quotes_data)
+        #self.all_quotes_data=pd.read_csv('alldata.csv',index_col='Date',parse_dates=True)
+        #print("all quotes data: \n",self.all_quotes_data.head())
         ##self.data_process(all_quotes)
         
-        self.data_export(some_quotes, output_types, None)
+        #self.data_export(some_quotes, output_types, None)
+        self.data_import(None, None, None)
 
     def run(self):
         ## output types

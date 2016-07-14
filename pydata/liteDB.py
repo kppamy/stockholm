@@ -127,6 +127,8 @@ def create_table(conn, sql):
         print('the [{}] is empty or equal None!'.format(sql))
 def writeSqlPD(dfdata,table):
     dfdata.to_sql(table,enginePD,if_exists='replace')
+def updateSqlPD(dfdata,table):
+    dfdata.to_sql(table,enginePD,if_exists='append')
 ###############################################################
 ####            创建|删除表操作     END
 ###############################################################

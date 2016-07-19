@@ -439,6 +439,7 @@ class Pydata(object):
                 try:
                     kdj.getKDJ(quote['Data'])
                 except KeyError as e:
+                    
                     print("Key Error")
                     print(e)
                     print(quote)
@@ -451,9 +452,10 @@ class Pydata(object):
         if(file_name is None):
             file_name = self.export_file_name
         alldata=pd.read_csv(directory + '/' + file_name + '.csv')
-        grp=alldata.groupby('Symbol').groups.keys()
-        print('grouped data first: \n',grp)
-        #print('grouped data last: \n',grp.last())
+        re=alldata.set_index('Symbol')
+        #print("all data from csv: \n",alldata.head())
+        tmp=re.loc['000001.SS']
+        print('grouped data first: \n',tmp)
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def data_export(self, all_quotes, export_type_array, file_name):

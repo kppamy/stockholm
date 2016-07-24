@@ -15,6 +15,7 @@ from liteDB import *
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from strategy import *
 class Pydata(object):
 
     def __init__(self, args):
@@ -446,17 +447,13 @@ class Pydata(object):
 
         print("data_process end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
-    def data_import(self, all_quotes, export_type_array, file_name):
+    def read_csv_file(self, all_quotes, export_type_array, file_name):
         start = timeit.default_timer()
         directory = self.export_folder
         if(file_name is None):
             file_name = self.export_file_name
-        alldata=pd.read_csv(directory + '/' + file_name + '.csv')
-        re=alldata.set_index('Symbol')
-        #print("all data from csv: \n",alldata.head())
-        tmp=re.loc['000001.SS']
-        print('grouped data first: \n',tmp)
-        print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+        st=pd.read_csv(directory + '/' + file_name + '.csv')
+        return st
 
     def data_export(self, all_quotes, export_type_array, file_name):
         
@@ -682,8 +679,9 @@ class Pydata(object):
         ##self.data_process(all_quotes)
         
         #self.data_export(some_quotes, output_types, None)
-        self.data_import(None, None, None)
-
+        st=self.read_csv_file(None,None,None)
+        strategy=Strategy()
+        strategy.mark_all_down(st)
     def run(self):
         ## output types
         output_types = []

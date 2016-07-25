@@ -229,8 +229,9 @@ class Pydata(object):
             r = requests.get(self.yql_url, params=r_params)
             rjson = r.json()
             print("all sectors json: \n",rjson)
-            #try:
-                #quote_info = rjson['query']['results']['quote']
+            try:
+                quote_info = rjson['query']['results']['quote']
+                print("all sectors info: \n",quote_info)
                 #quote['LastTradeDate'] = quote_info['LastTradeDate']
                 #quote['LastTradePrice'] = quote_info['LastTradePriceOnly']
                 #quote['PreviousClose'] = quote_info['PreviousClose']
@@ -246,9 +247,9 @@ class Pydata(object):
                 #quote['YearHigh'] = quote_info['YearHigh']
                 #quote['YearLow'] = quote_info['YearLow']
                 #self.all_quotes_info.append(quote)
-            #except Exception as e:
-               # print("Error: Failed to load stock info... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
-               ## print(e + "\n")
+            except Exception as e:
+                print("Error: Failed to load stock info... "  + "\n")
+                #print(e + "\n")
                # if(not is_retry):
                #     time.sleep(1)
                #     load_quote_info(quote, True) ## retry once for network issue
@@ -730,8 +731,8 @@ class Pydata(object):
         #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
         sectors={} 
         self.load_sectors_info(sectors,False)
-        counter = []
-        self.load_all_between(all_quotes[0:10],start_date,end_date,False,counter)
+        #counter = []
+        #self.load_all_between(all_quotes[0:10],start_date,end_date,False,counter)
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
         #print("all quotes symbol: \n",all_quotes[0:10])
@@ -749,6 +750,7 @@ class Pydata(object):
         #print("all quotes data: \n",self.all_quotes_data.head())
         ##self.data_process(all_quotes)
         
+        self.data_export(sectors, output_types, None)
         #self.data_export(some_quotes, output_types, None)
         #st=self.read_csv_file(None,None,None)
         #strategy=Strategy()

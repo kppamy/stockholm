@@ -218,6 +218,44 @@ class Pydata(object):
         print("load_all_quote_symbol end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return all_quotes
 
+    def load_sectors_info(self, quote, is_retry):
+        print("load_sectors_info start..." + "\n")
+        
+        start = timeit.default_timer()
+
+        if(quote is not None):
+            yquery = 'select * from yahoo.finance.sectors'
+            r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            r = requests.get(self.yql_url, params=r_params)
+            rjson = r.json()
+            print("all sectors json: \n",rjson)
+            #try:
+                #quote_info = rjson['query']['results']['quote']
+                #quote['LastTradeDate'] = quote_info['LastTradeDate']
+                #quote['LastTradePrice'] = quote_info['LastTradePriceOnly']
+                #quote['PreviousClose'] = quote_info['PreviousClose']
+                #quote['Open'] = quote_info['Open']
+                #quote['DaysLow'] = quote_info['DaysLow']
+                #quote['DaysHigh'] = quote_info['DaysHigh']
+                #quote['Change'] = quote_info['Change']
+                #quote['ChangeinPercent'] = quote_info['ChangeinPercent']
+                #quote['Volume'] = quote_info['Volume']
+                #quote['MarketCap'] = quote_info['MarketCapitalization']
+                #quote['StockExchange'] = quote_info['StockExchange']
+                #quote['BookValue'] = quote_info['BookValue']
+                #quote['YearHigh'] = quote_info['YearHigh']
+                #quote['YearLow'] = quote_info['YearLow']
+                #self.all_quotes_info.append(quote)
+            #except Exception as e:
+               # print("Error: Failed to load stock info... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
+               ## print(e + "\n")
+               # if(not is_retry):
+               #     time.sleep(1)
+               #     load_quote_info(quote, True) ## retry once for network issue
+            
+        #print(quote)
+        print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+        return quote
     def load_quote_info(self, quote, is_retry):
         #print("load_quote_info start..." + "\n")
         
@@ -269,6 +307,35 @@ class Pydata(object):
         print("load_all_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s")
         return all_quotes
 
+    def load_all_between(self, quote, start_date, end_date, is_retry, counter):
+        print("load_all_between start..." + "\n")
+        
+        start = timeit.default_timer()
+
+        if(quote is not None ):        
+            yquery = 'select * from yahoo.finance.historicaldata where startDate = "' + start_date + '" and endDate = "' + end_date + '"'
+            r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            try:
+                r = requests.get(self.yql_url, params=r_params)
+                rjson = r.json()
+                print("quote data rjson\n",rjson)
+                quote_data = rjson['query']['results']['quote']
+                quote_data.reverse()
+                quote['Data'] = quote_data
+                print("load all data bettween : \n",quote_data)
+                #self.data_save_one(quote)
+                if(not is_retry):
+                    counter.append(1)          
+            except:
+                print("Error: Failed to load stock data...  \n")
+                if(not is_retry):
+                    time.sleep(2)
+                    self.load_all_between(quote, start_date, end_date, True, counter) ## retry once for network issue
+        
+        print("load_all_quote_data end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+        return quote
+    
+    
     def load_quote_data(self, quote, start_date, end_date, is_retry, counter):
         ## print("load_quote_data start..." + "\n")
         
@@ -659,8 +726,12 @@ class Pydata(object):
        #print("single stock dtype after adjusting:\n",quote.dtypes)
 
     def data_load(self, start_date, end_date, output_types):
-        #all_quotes = self.load_all_quote_symbol()
+        all_quotes = self.load_all_quote_symbol()
         #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
+        sectors={} 
+        self.load_sectors_info(sectors,False)
+        counter = []
+        self.load_all_between(all_quotes[0:10],start_date,end_date,False,counter)
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
         #print("all quotes symbol: \n",all_quotes[0:10])
@@ -679,9 +750,9 @@ class Pydata(object):
         ##self.data_process(all_quotes)
         
         #self.data_export(some_quotes, output_types, None)
-        st=self.read_csv_file(None,None,None)
-        strategy=Strategy()
-        strategy.mark_all_down(st)
+        #st=self.read_csv_file(None,None,None)
+        #strategy=Strategy()
+        #strategy.mark_all_down(st)
     def run(self):
         ## output types
         output_types = []

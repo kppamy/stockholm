@@ -224,7 +224,7 @@ class Pydata(object):
         start = timeit.default_timer()
 
         if(quote is not None):
-            yquery = 'select * from yahoo.finance.sectors'
+            yquery = 'select * from yahoo.finance.industry where id="881150"'
             r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
             r = requests.get(self.yql_url, params=r_params)
             rjson = r.json()
@@ -727,10 +727,10 @@ class Pydata(object):
        #print("single stock dtype after adjusting:\n",quote.dtypes)
 
     def data_load(self, start_date, end_date, output_types):
-        all_quotes = self.load_all_quote_symbol()
+        #all_quotes = self.load_all_quote_symbol()
         #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
-        sectors={} 
-        self.load_sectors_info(sectors,False)
+        #sectors={} 
+        #self.load_sectors_info(sectors,False)
         #counter = []
         #self.load_all_between(all_quotes[0:10],start_date,end_date,False,counter)
         #self.convert_allinone_dtyp()
@@ -750,9 +750,10 @@ class Pydata(object):
         #print("all quotes data: \n",self.all_quotes_data.head())
         ##self.data_process(all_quotes)
         
-        self.data_export(sectors, output_types, None)
+        #self.data_export(sectors, output_types, None)
         #self.data_export(some_quotes, output_types, None)
-        #st=self.read_csv_file(None,None,None)
+        st=self.read_csv_file(None,None,'concepts')
+        print("read concepts data:\n",st)
         #strategy=Strategy()
         #strategy.mark_all_down(st)
     def run(self):

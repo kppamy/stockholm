@@ -210,6 +210,7 @@ class Pydata(object):
                     ## convert quote code end
                     quote['Symbol'] = code
                     quote['Name'] = name
+                    print("load "+code+" "+name)
                     all_quotes.append(quote)
                 count += 1
         except Exception as e:
@@ -354,7 +355,8 @@ class Pydata(object):
                 quote_data = rjson['query']['results']['quote']
                 quote_data.reverse()
                 quote['Data'] = quote_data
-                self.data_save_one(quote)
+                #print("one quote data from yahoo:\n",quote_data)
+                #self.data_save_one(quote)
                 if(not is_retry):
                     counter.append(1)          
             except:
@@ -727,7 +729,7 @@ class Pydata(object):
        #print("single stock dtype after adjusting:\n",quote.dtypes)
 
     def data_load(self, start_date, end_date, output_types):
-        #all_quotes = self.load_all_quote_symbol()
+        all_quotes = self.load_all_quote_symbol()
         #print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
         #sectors={} 
         #self.load_sectors_info(sectors,False)
@@ -737,12 +739,12 @@ class Pydata(object):
         #writeSqlPD(self.allInOne,'MKTNewest')
         #print("all quotes symbol: \n",all_quotes[0:10])
         #some_quotes = all_quotes
-        #some_quotes = all_quotes[0:10]
+        some_quotes = all_quotes[0:10]
         #self.load_all_quote_info(some_quotes)
         #qi=pd.DataFrame(self.all_quotes_info)
         #print("all quotes info len : \n",qi.dropna(axis=1,how='all'))
         #print("all quotes info len : \n",qi)
-        #self.load_all_quote_data(some_quotes, start_date, end_date)
+        self.load_all_quote_data(some_quotes, start_date, end_date)
         #self.data_save(some_quotes)
         #qd=pd.DataFrame(self.all_quotes_data)
        # self.all_quotes_data.to_csv("alldata.csv")
@@ -752,7 +754,7 @@ class Pydata(object):
         
         #self.data_export(sectors, output_types, None)
         #self.data_export(some_quotes, output_types, None)
-        st=self.read_csv_file(None,None,'concepts')
+        st=self.read_csv_file(None,None,'industry')
         print("read concepts data:\n",st)
         #strategy=Strategy()
         #strategy.mark_all_down(st)

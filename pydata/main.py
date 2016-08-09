@@ -1,4 +1,5 @@
 from pydata import Pydata
+from grab import Grab
 import option
 import os
 
@@ -26,9 +27,15 @@ def main():
         print('Please make sure you have the permission to save the data!\n')
     else:
         print('Stockholm is starting...\n')
+        grab=Grab(args)
+        #grab.run()
+        all_quotes={}
+        df=grab.read_csv_file(all_quotes)
+        all_quotes=df.to_dict('records')
         stockh = Pydata(args)
-        stockh.run()
+        stockh.run(all_quotes)
         print('Stockholm is done...\n')
+        return all_quotes
 
 if __name__ == '__main__':
     main()

@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from strategy import *
+from grab import * 
 class Pydata(object):
 
     def __init__(self, args):
@@ -40,42 +41,22 @@ class Pydata(object):
         self.testfile_path = args.testfile_path
         ## methods for back testing
         self.methods = args.methods
-
         ## for getting quote symbols
         self.all_quotes_url = 'http://money.finance.sina.com.cn/d/api/openapi_proxy.php'
         ## for loading quote data
         self.yql_url = 'http://query.yahooapis.com/v1/public/yql'
         ## export file name
         self.export_file_name = 'pydata_export'
-
         self.index_array = ['000001.SS', '399001.SZ', '000300.SS']
         self.sh000001 = {'Symbol': '000001.SS', 'Name': '上证指数'}
         self.sz399001 = {'Symbol': '399001.SZ', 'Name': '深证成指'}
         self.sh000300 = {'Symbol': '000300.SS', 'Name': '沪深300'}
         ## self.sz399005 = {'Symbol': '399005.SZ', 'Name': '中小板指'}
         ## self.sz399006 = {'Symbol': '399006.SZ', 'Name': '创业板指'}
-
-        ## mongodb info
-        #self.mongo_url = 'localhost'
-        #self.mongo_port = 27017
-        #self.database_name = args.db_name
         #self.collection_name = 'testing_method'
-        
         self.all_quotes_info=[]
         self.all_quotes_data=[]
         
-    def get_columns(self, quote):
-        columns = []
-        if(quote is not None):
-            for key in quote.keys():
-                if(key == 'Data'):
-                    for data_key in quote['Data'][-1]:
-                        columns.append("data." + data_key)
-                else:
-                    columns.append(key)
-            columns.sort()
-        return columns
-
     def get_profit_rate(self, price1, price2):
         if(price1 == 0):
             return None
@@ -160,53 +141,16 @@ class Pydata(object):
                         data['KDJ_J'] = 0
                     else:
                         data['KDJ_J'] = j[idx]
-                
             return quote_data
 
-    def data_save(self,all_quotes):
-        #df=pd.DataFrame(all_quotes)
-        #print("Stocks to be saved to DB: \n",df)
-        start = timeit.default_timer()
-        count=1
+    def data_clear(self,all_quotes):
         for quote in all_quotes:
-            if ('Data' in quote and 'Symbol' in quote):
-                df=pd.DataFrame(quote['Data'])
-                self.all_quotes_data.append(df)
-                print("stock ",quote['Symbol']," save to db")
-                self.convert_onestock_dtype(df)
-                #writeSqlPD(df,quote['Symbol'])
-                updateSqlPD(df,quote['Symbol'])
-                count=count+1
-            #if(count==5):
-            #    break
-        print("%d stocks have saved to DB\n"%count)
-        print("save data to DB end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
-
-    def data_save_one(self,quote):
-        if ('Data' in quote and 'Symbol' in quote):
-            df=pd.DataFrame(quote['Data'])
-            self.all_quotes_data.append(df)
-            print("stock ",quote['Symbol']," save to db")
-            self.convert_onestock_dtype(df)
-            #writeSqlPD(df,quote['Symbol'])
-            updateSqlPD(df,quote['Symbol'])
-
-
-    def data_process(self, all_quotes):
-        print("data_process start..." + "\n")
-        
-        kdj = self.KDJ()
-        start = timeit.default_timer()
-        
-        for quote in all_quotes:
-
             if(quote['Symbol'].startswith('300')):
                 quote['Type'] = '创业板'
             elif(quote['Symbol'].startswith('002')):
                 quote['Type'] = '中小板'
             else:
                 quote['Type'] = '主板'
-            
             if('Data' in quote):
                 try:
                     temp_data = []
@@ -227,6 +171,7 @@ class Pydata(object):
                     print(e)
                     print(quote)
 
+    def calculate_MA(self,all_quotes):
         ## calculate Change / 5 10 20 30 Day MA
         for quote in all_quotes:
             if('Data' in quote):
@@ -238,7 +183,6 @@ class Pydata(object):
                         else:
                             quote_data['Change'] = None
                             quote_data['Vol_Change'] = None
-                            
                     last_5_array = []
                     last_10_array = []
                     last_20_array = []
@@ -252,103 +196,52 @@ class Pydata(object):
                         quote_data['MA_10'] = None
                         quote_data['MA_20'] = None
                         quote_data['MA_30'] = None
-                        
                         if(i < 4):
                             continue
                         if(len(last_5_array) == 5):
                             last_5_array.pop(0)
                         quote_data['MA_5'] = self.get_MA(last_5_array)
-                        
                         if(i < 9):
                             continue
                         if(len(last_10_array) == 10):
                             last_10_array.pop(0)
                         quote_data['MA_10'] = self.get_MA(last_10_array)
-                        
                         if(i < 19):
                             continue
                         if(len(last_20_array) == 20):
                             last_20_array.pop(0)
                         quote_data['MA_20'] = self.get_MA(last_20_array)
-                        
                         if(i < 29):
                             continue
                         if(len(last_30_array) == 30):
                             last_30_array.pop(0)
                         quote_data['MA_30'] = self.get_MA(last_30_array)
-                        
-                        
                 except KeyError as e:
                     print("Key Error")
                     print(e)
                     print(quote)
 
+
+    def calculate_KDJ(self,all_quotes):
+        kdj = self.KDJ()
         ## calculate KDJ
         for quote in all_quotes:
             if('Data' in quote):
                 try:
                     kdj.getKDJ(quote['Data'])
                 except KeyError as e:
-                    
                     print("Key Error")
                     print(e)
                     print(quote)
 
+
+    def data_process(self, all_quotes):
+        print("data_process start..." + "\n")
+        start = timeit.default_timer()
+        self.data_clear(all_quotes)
+        self.calculate_MA(all_quotes)
+        self.calculate_KDJ(all_quotes)
         print("data_process end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
-
-    def read_csv_file(self, all_quotes, export_type_array, file_name):
-        start = timeit.default_timer()
-        directory = self.export_folder
-        if(file_name is None):
-            file_name = self.export_file_name
-        st=pd.read_csv(directory + '/' + file_name + '.csv')
-        return st
-
-    def data_export(self, all_quotes, export_type_array, file_name):
-        
-        start = timeit.default_timer()
-        directory = self.export_folder
-        if(file_name is None):
-            file_name = self.export_file_name
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        if(all_quotes is None or len(all_quotes) == 0):
-            print("no data to export...\n")
-        
-        if('json' in export_type_array):
-            print("start export to JSON file...\n")
-            f = io.open(directory + '/' + file_name + '.json', 'w', encoding=self.charset)
-            json.dump(all_quotes, f, ensure_ascii=False)
-            
-        if('csv' in export_type_array):
-            print("start export to CSV file...\n")
-            columns = []
-            if(all_quotes is not None and len(all_quotes) > 0):
-                columns = self.get_columns(all_quotes[0])
-            writer = csv.writer(open(directory + '/' + file_name + '.csv', 'w', encoding=self.charset))
-            writer.writerow(columns)
-
-            for quote in all_quotes:
-                if('Data' in quote):
-                    for quote_data in quote['Data']:
-                        try:
-                            line = []
-                            for column in columns:
-                                if(column.find('data.') > -1):
-                                    if(column[5:] in quote_data):
-                                        line.append(quote_data[column[5:]])
-                                else:
-                                    line.append(quote[column])
-                            writer.writerow(line)
-                        except Exception as e:
-                            print(e)
-                            print("write csv error: " + quote)
-            
-        #if('mongo' in export_type_array):
-        #    print("start export to MongoDB...\n")
-            
-        print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def file_data_load(self):
         print("file_data_load start..." + "\n")
@@ -492,21 +385,8 @@ class Pydata(object):
         print("profit_test end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return results
     
-    def run(self):
-        ## output types
-        output_types = []
-        if(self.output_type == "json"):
-            output_types.append("json")
-        elif(self.output_type == "csv"):
-            output_types.append("csv")
-        elif(self.output_type == "all"):
-            output_types = ["json", "csv"]
-        init() 
-        #main()
-        ## loading stock data
-        if(self.reload_data == 'Y'):
-            self.data_load(self.start_date, self.end_date, output_types)
-            
+    def run(self,all_quotes):
+        self.data_process(all_quotes)
         ## test & generate portfolio
         if(self.gen_portfolio == 'Y'):
             print("Start portfolio testing...\n")

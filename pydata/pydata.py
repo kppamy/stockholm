@@ -56,6 +56,7 @@ class Pydata(object):
         #self.collection_name = 'testing_method'
         self.all_quotes_info=[]
         self.all_quotes_data=[]
+        self.strategy=Strategy()
         
     def get_profit_rate(self, price1, price2):
         if(price1 == 0):
@@ -386,7 +387,8 @@ class Pydata(object):
         return results
     
     def run(self,all_quotes):
-        self.data_process(all_quotes)
+        #self.data_process(all_quotes)
+        self.strategy.run(all_quotes)
         ## test & generate portfolio
         if(self.gen_portfolio == 'Y'):
             print("Start portfolio testing...\n")

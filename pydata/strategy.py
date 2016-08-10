@@ -19,9 +19,11 @@ class Strategy(object):
     def mark_all_down(self, all_quotes):
         start = timeit.default_timer()
         st=all_quotes
-        st.columns=['Name', 'Symbol', 'Adj_Close', 'Close', 'Date','High','Low', 'Open', 'symbol', 'Volume']
+        st.columns=['name', 'Symbol', 'Adj_Close', 'Close', 'Date','High','Low', 'Open', 'symbol', 'Volume']
         st=st.drop('symbol',axis=1)
-        symbols=st.Symbol.unique()
+        symbols=st[['name', 'Symbol']]
+        symbols.drop_duplicates(inplace=True)
+        print('all symbols : \n',symbols.head())
         count=0
         for i in symbols[:4]:
             count=count+1
@@ -35,3 +37,6 @@ class Strategy(object):
         print("mark data",self.all_marks)
         pd.DataFrame.to_csv(self.all_marks,'allmarks.csv')
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+
+    def run(self,all_quotes):
+        self.mark_all_down(all_quotes)

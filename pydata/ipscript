@@ -1,0 +1,11 @@
+import pandas as pd
+from pandas import DataFrame
+alldata=pd.read_csv('USER_HOME/tmp/stockholm_export/pydata_export.csv')
+alldata.head()
+ss1=alldata[alldata.Symbol=='000001.SS']
+ss1.head()
+prc=ss1.data.Adj_Close
+ss1.columns=['Name', 'Symbol', 'Adj_Close', 'Close', 'Date','High', 'Low', 'Open', 'symbol', 'Volume']
+prc=ss1.Adj_Close
+prc.pct_change
+ss1['pct_change']=prc.pct_change

@@ -1,11 +1,22 @@
 import pandas as pd
 from pandas import DataFrame
 alldata=pd.read_csv('USER_HOME/tmp/stockholm_export/pydata_export.csv')
-alldata.head()
+alldata.columns=['Name', 'Symbol', 'Adj_Close', 'Close', 'Date','High', 'Low', 'Open', 'symbol', 'Volume']
 ss1=alldata[alldata.Symbol=='000001.SS']
-ss1.head()
-prc=ss1.data.Adj_Close
-ss1.columns=['Name', 'Symbol', 'Adj_Close', 'Close', 'Date','High', 'Low', 'Open', 'symbol', 'Volume']
 prc=ss1.Adj_Close
-prc.pct_change
-ss1['pct_change']=prc.pct_change
+ss1['pct_change']=prc.pct_change()
+ss1['v_change']=ss1.Volume.pct_change()
+prc=df.Close
+df['p_change']=prc.pct_change()
+v=df.Volume
+df['v_change']=v.pct_change()
+df.loc[(df.v_change>0) & (df.p_change>0), 'mark']=2
+df.loc[(df.v_change<0) & (df.p_change>0), 'mark']=1
+df.loc[(df.v_change<0) & (df.p_change<0), 'mark']=-1
+df.loc[(df.v_change>0) & (df.p_change<0), 'mark']=-2
+import numpy as np
+df['ma5']=prc.rolling(5).mean()
+df['ma10']=prc.rolling(10).mean()
+df['ma20']=prc.rolling(20).mean()
+df['ma51']=prc.rolling(51).mean()
+

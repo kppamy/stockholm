@@ -288,10 +288,25 @@ def fetchall_test(table):
     conn = get_conn(DB_FILE_PATH)
     fetchall(conn, fetchall_sql)
 
-def fetchallPD(table):
-    #stocks=pd.read_sql_table(table,dbConnPD)
+def fetchOnePD(table):
     stocks=pd.read_sql(table,dbConnPD)
-    print(stocks,)
+    return stocks
+
+def fetchallPD():
+    tables=fetchOnePD('Select name FROM sqlite_master where type="table"')
+    symbols=tables.name
+    fil=[x for x in symbols if x[-3]=='.']
+    count=1
+    for x in fil:
+        if(count ==1 ):
+            df=fetchOnePD(x)
+        else:
+            tmp=fetchOnePD(x)
+            df=df.append(tmp,ignore_index=True)
+        count=count+1
+        print("fetch " + x + " from DB")
+    print("fetch "+ str(count) +" quotes from DB")
+    return df 
 
 def fetchone_test():
     '''查询一条数据...'''

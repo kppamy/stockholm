@@ -281,9 +281,9 @@ class Grab(object):
         return st
 
     def data_load(self, start_date, end_date, output_types):
-        #all_quotes = self.load_all_quote_symbol()
-        df=pd.read_csv('allsymbols.csv')
-        all_quotes=df.to_dict('records')
+        all_quotes = self.load_all_quote_symbol()
+        #df=pd.read_csv('allsymbols.csv')
+        #all_quotes=df.to_dict('records')
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
         some_quotes = all_quotes

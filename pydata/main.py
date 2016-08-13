@@ -32,7 +32,7 @@ def main():
         dic={}
         all_quotes=grab.read_csv_file(dic)
 
-        #all_quotes=df.to_dict('records')
+        ##all_quotes=df.to_dict('records')
         stockh = Pydata(args)
         stockh.run(all_quotes)
         print('Stockholm is done...\n')

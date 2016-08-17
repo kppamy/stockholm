@@ -52,11 +52,15 @@ def ma_cal(df):
     df['ma51']=prc.rolling(51).mean()
 
 def top_industry(data,industrys,n=3):
-    marks=data.groupby(['Symbol','Name','industry_name'])['mark'].sum()
+    marks=data.groupby(['Symbol','industry_name'])['mark'].sum()
+    res=pd.DataFrame(columns=['Symbol','mark'])
     for x in industrys:
-        mark_ind=marks[:,:,x]
+        mark_ind=marks[:,x]
         mark_sort=mark_ind.sort_values()
-        print("\n########################top "+ str(n)+ " of "+x+" : \n",mark_sort[-n:])
+        tmp=mark_sort[-n:]
+        print("\n########################top "+ str(n)+ " of "+x+" : \n",tmp)
+        res=res.append(tmp.reset_index())
+    return res
 
 def basics_cal(all_quotes):
     start = timeit.default_timer()
@@ -88,7 +92,20 @@ def basics_cal(all_quotes):
     all_marks.to_csv('tmp.csv')
     print("process is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
     return all_marks
-     
+
+def away51Top(data,industrys,n=3):
+    tops=top_industry(data,industrys,n)
+    r51=away51(data,'2016-08-12')
+    res=r51.merge(tops,on='Symbol')
+    res=res[['Date', 'Symbol', 'Name','industry_name','ma51', 'mark_y']]
+    print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
+    res=res.sort('industry_name')
+    return res
+
+def away51(m51,date):
+    r51=m51[(( m51.Close > (m51.ma51*1.1))|(m51.Close < (m51.ma51*0.9)))&(m51.Date == date)]
+    return r51
+
 def run(all_quotes):
     basics_cal(all_quotes)
     #mark_all_down(all_quotes)

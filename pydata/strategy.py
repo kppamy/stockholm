@@ -51,7 +51,8 @@ def ma_cal(df):
     df['ma20']=prc.rolling(20).mean()
     df['ma51']=prc.rolling(51).mean()
 
-def top_industry(data,industrys,n=3):
+def top_industry(data,n=3):
+    industrys=data.industry_name.drop_duplicates()
     marks=data.groupby(['Symbol','industry_name'])['mark'].sum()
     res=pd.DataFrame(columns=['Symbol','mark'])
     for x in industrys:
@@ -93,8 +94,8 @@ def basics_cal(all_quotes):
     print("process is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
     return all_marks
 
-def away51Top(data,industrys,n=3):
-    tops=top_industry(data,industrys,n)
+def away51Top(data,n=3):
+    tops=top_industry(data,n)
     r51=away51(data,'2016-08-12')
     res=r51.merge(tops,on='Symbol')
     res=res[['Date', 'Symbol', 'Name','industry_name','ma51', 'mark_y']]
@@ -106,6 +107,13 @@ def away51(m51,date):
     r51=m51[(( m51.Close > (m51.ma51*1.1))|(m51.Close < (m51.ma51*0.9)))&(m51.Date == date)]
     return r51
 
-def run(all_quotes):
-    basics_cal(all_quotes)
+def run():
+    #basics_cal(all_quotes)
     #mark_all_down(all_quotes)
+    data=pd.read_csv('data.csv')
+    data=data.drop('Unnamed: 0',axis=1)
+    data=data.drop('Unnamed: 0.1',axis=1)
+    out=away51Top(data)
+    print(out)
+
+#run()

@@ -2,7 +2,8 @@
 # coding=utf-8
 import requests
 import json
-import datetime
+from datetime import datetime
+from datetime import timedelta
 import timeit
 import time
 import io
@@ -175,19 +176,55 @@ class Grab(object):
 
         print("load_all_quote_data end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return quote
+    
+    def get_quote_hist(self,symbol):
+        '''
+        symbol: string, 600000.SS
+        '''
+        now=datetime.now()
+        data=[]
+        while True:
+            start_datetime=now
+            start_date=start_datetime.strftime('%Y-%m-%d')
+            end_date=(start_datetime-timedelta(365)).strftime('%Y-%m-%d')
+            yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol.upper() + '" and startDate = "' + end_date + '" and endDate = "' + start_date + '"'
+            r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            quote_data=[]
+            try:
+                r = requests.get(self.yql_url, params=r_params)
+                rjson = r.json()
+                quote_data = rjson['query']['results']['quote']
+                quote_data.reverse()
+                print("load symbol"+symbol + ' at year '+start_date)
+            except:
+                print("Error: Failed to load stock data... " + symbol+ " "+ start_date+"\n")
+                break
+            data=data+quote_data
+            now=now-timedelta(365)
+        df=pd.DataFrame.from_dict(data)
+        return df
 
+    def get_oneyear_quote(self,symbol, start_datetime):
+        '''
+        symbol: string, 600000.SS
+        start_date: datetime
+        '''
+        start_date=start_datetime.strftime('%Y-%m-%d')
+        end_date=(start_datetime-timedelta(365)).strftime('%Y-%m-%d')
+        quote={}
+        quote['Symbol']=symbol
+        quote['Name']=''
+        return self.load_quote_data(quote,end_date,start_date,True,[])
 
     def load_quote_data(self, quote, start_date, end_date, is_retry, counter):
         ## print("load_quote_data start..." + "\n")
-
         start = timeit.default_timer()
-
         if(quote is not None and quote['Symbol'] is not None):        
             yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + quote['Symbol'].upper() + '" and startDate = "' + start_date + '" and endDate = "' + end_date + '"'
             r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
             try:
                 r = requests.get(self.yql_url, params=r_params)
-                ## print(r.url)
+                #print(r.url)
                 ## print(r.text)
                 rjson = r.json()
                 #print("quote data rjson\n",rjson)
@@ -195,7 +232,7 @@ class Grab(object):
                 quote_data.reverse()
                 quote['Data'] = quote_data
                 #print("one quote data from yahoo:\n",quote_data)
-                self.data_save_one(quote)
+                #self.data_save_one(quote)
                 if(not is_retry):
                     counter.append(1)          
             except:
@@ -203,21 +240,17 @@ class Grab(object):
                 if(not is_retry):
                     time.sleep(2)
                     self.load_quote_data(quote, start_date, end_date, True, counter) ## retry once for network issue
-
         return quote
 
     def load_all_quote_data(self, all_quotes, start_date, end_date):
         print("load_all_quote_data start...start:%s , end:%s,\n"%(start_date,end_date))
-
         start = timeit.default_timer()
-
         counter = []
         mapfunc = partial(self.load_quote_data, start_date=start_date, end_date=end_date, is_retry=True, counter=counter)
         pool = ThreadPool(self.thread)
         pool.map(mapfunc, all_quotes) ## multi-threads executing
         pool.close() 
         pool.join()
-
         print("load_all_quote_data end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         l=len(all_quotes)
         print("loaded %d stocks data: \n"%l)
@@ -281,12 +314,12 @@ class Grab(object):
         return st
 
     def data_load(self, start_date, end_date, output_types):
-        all_quotes = self.load_all_quote_symbol()
-        #df=pd.read_csv('allsymbols.csv')
-        #all_quotes=df.to_dict('records')
+        #all_quotes = self.load_all_quote_symbol()
+        df=pd.read_csv('allsymbols.csv')
+        all_quotes=df.to_dict('records')
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
-        some_quotes = all_quotes
+        some_quotes = all_quotes[:4]
         self.load_all_quote_data(some_quotes, start_date, end_date)
         self.data_export(all_quotes, output_types, None)
 
@@ -344,7 +377,12 @@ class Grab(object):
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
         init() 
+        #self.data_load(self.start_date, self.end_date, output_types)
+        res=self.get_quote_hist('601009.SS')
+        print(res)
         ## loading stock data
-        if(self.reload_data == 'Y'):
-            self.data_load(self.start_date, self.end_date, output_types)
-            
+        #if(self.reload_data == 'Y'):
+        #    self.data_load(self.start_date, self.end_date, output_types)
+
+
+

@@ -52,7 +52,7 @@ class Grab(object):
         ## self.sz399005 = {'Symbol': '399005.SZ', 'Name': '中小板指'}
         ## self.sz399006 = {'Symbol': '399006.SZ', 'Name': '创业板指'}
         #self.collection_name = 'testing_method'
-        self.all_quotes_info=[]
+        self.all_quotes_fail=[]
         self.all_quotes_data=[]
         
     def load_all_quote_symbol(self):
@@ -235,11 +235,12 @@ class Grab(object):
                 quote_data.reverse()
                 quote['Data'] = quote_data
                 #print("one quote data from yahoo:\n",quote_data)
-                #self.data_save_one(quote)
+                self.data_save_one(quote)
                 if(not is_retry):
                     counter.append(1)          
             except:
                 print("Error: Failed to load stock data... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
+                self.all_quotes_fail.append(quote['Symbol'])
                 if(not is_retry):
                     time.sleep(2)
                     self.load_quote_data(quote, start_date, end_date, True, counter) ## retry once for network issue
@@ -322,8 +323,10 @@ class Grab(object):
         all_quotes=df.to_dict('records')
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
-        some_quotes = all_quotes[:4]
+        some_quotes = all_quotes
         self.load_all_quote_data(some_quotes, start_date, end_date)
+        fails=pd.DataFrame(self.all_quotes_fail,columns=['Symbol'])
+        fails.to_csv('fail.csv')
         self.data_export(all_quotes, output_types, None)
 
     def convert_allinone_dtyp(self):
@@ -380,10 +383,10 @@ class Grab(object):
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
         init() 
-        #self.data_load(self.start_date, self.end_date, output_types)
-        res=self.get_quote_hist('601009.SS')
-        res.to_csv('ss.csv')
-        print(res)
+        self.data_load(self.start_date, self.end_date, output_types)
+        #res=self.get_quote_hist('601009.SS')
+        #res.to_csv('ss.csv')
+        #print(res)
         ## loading stock data
         #if(self.reload_data == 'Y'):
         #    self.data_load(self.start_date, self.end_date, output_types)

@@ -195,13 +195,16 @@ class Grab(object):
                 rjson = r.json()
                 quote_data = rjson['query']['results']['quote']
                 quote_data.reverse()
-                print("load symbol"+symbol + ' at year '+start_date)
+                print("load symbol "+symbol + ' at year '+start_date)
             except:
                 print("Error: Failed to load stock data... " + symbol+ " "+ start_date+"\n")
                 break
             data=data+quote_data
             now=now-timedelta(365)
         df=pd.DataFrame.from_dict(data)
+        df=df.drop_duplicates()
+        df=df[['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']]
+        df=df.sort(columns='Date',ascending=False) 
         return df
 
     def get_oneyear_quote(self,symbol, start_datetime):
@@ -379,6 +382,7 @@ class Grab(object):
         init() 
         #self.data_load(self.start_date, self.end_date, output_types)
         res=self.get_quote_hist('601009.SS')
+        res.to_csv('ss.csv')
         print(res)
         ## loading stock data
         #if(self.reload_data == 'Y'):

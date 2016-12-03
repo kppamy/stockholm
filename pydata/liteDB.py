@@ -288,20 +288,22 @@ def fetchall_test(table):
     conn = get_conn(DB_FILE_PATH)
     fetchall(conn, fetchall_sql)
 
-def fetchOnePD(table):
-    stocks=pd.read_sql(table,dbConnPD)
+''' date format : 2011-07-01'''
+def fetchOnePD(table,start_date=None,end_date=None):
+    stocks=pd.read_sql("SELECT * FROM '"+table+"'  WHERE date BETWEEN strftime('"+DATETIME_FORMAT+"','"+start_date+ "') AND strftime('"+DATETIME_FORMAT+"','"+end_date+"')  ",dbConnPD)
     return stocks
 
-def fetchallPD():
-    tables=fetchOnePD('Select name FROM sqlite_master where type="table"')
+''' date format : 2011-07-01'''
+def fetchallPD(start_date,end_date):
+    tables=pd.read_sql('Select name FROM sqlite_master where type="table"',dbConnPD)
     symbols=tables.name
     fil=[x for x in symbols if x[-3]=='.']
     count=1
     for x in fil:
         if(count ==1 ):
-            df=fetchOnePD(x)
+            df=fetchOnePD(x,start_date,end_date)
         else:
-            tmp=fetchOnePD(x)
+            tmp=fetchOnePD(x,start_date,end_date)
             df=df.append(tmp,ignore_index=True)
         count=count+1
         print("fetch " + x + " from DB")
@@ -341,6 +343,8 @@ def delete_test(table):
 
 def init():
     '''初始化方法'''
+    global DATETIME_FORMAT
+    DATETIME_FORMAT='%Y-%m-%d %H-%M-%f'
     #数据库文件绝句路径
     global DB_FILE_PATH
     DB_FILE_PATH = 'finance.db'
@@ -369,7 +373,7 @@ def init():
 def main():
    init()
    #fetchall_test(TABLE_NAME)
-   fetchallPD("SELECT * FROM '000001.SS' order by 'Volume' DESC")
+   #fetchallPD("SELECT * FROM '000001.SS' order by 'Volume' DESC")
    #print('#' * 50)
    #fetchone_test()
    #print('#' * 50)

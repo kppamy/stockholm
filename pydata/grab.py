@@ -54,6 +54,7 @@ class Grab(object):
         #self.collection_name = 'testing_method'
         self.all_quotes_fail=[]
         self.all_quotes_data=[]
+        self.update=args.update
         
     def load_all_quote_symbol(self):
         print("load_all_quote_symbol start..." + "\n")
@@ -207,13 +208,13 @@ class Grab(object):
         df=df.sort(columns='Date',ascending=False) 
         return df
 
-    def get_oneyear_quote(self,symbol, start_datetime):
+    def get_oneyear_quote(self,symbol):
         '''
         symbol: string, 600000.SS
         start_date: datetime
         '''
-        start_date=start_datetime.strftime('%Y-%m-%d')
-        end_date=(start_datetime-timedelta(365)).strftime('%Y-%m-%d')
+        start=self.start_date.strftime('%Y-%m-%d')
+        end=(start-timedelta(365)).strftime('%Y-%m-%d')
         quote={}
         quote['Symbol']=symbol
         quote['Name']=''
@@ -382,14 +383,14 @@ class Grab(object):
             output_types.append("csv")
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
-        init() 
-        self.data_load(self.start_date, self.end_date, output_types)
-        #res=self.get_quote_hist('601009.SS')
+        #init() 
+        print("************ ",self.update)
+        if self.update == 'Y':
+            self.data_load(self.start_date, self.end_date, output_types)
+        res=self.get_oneyear_quote('601009.SS')
         #res.to_csv('ss.csv')
         #print(res)
         ## loading stock data
         #if(self.reload_data == 'Y'):
         #    self.data_load(self.start_date, self.end_date, output_types)
-
-
 

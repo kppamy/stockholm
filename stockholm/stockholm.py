@@ -205,10 +205,8 @@ class Stockholm(object):
         return all_quotes
 
     def load_quote_info(self, quote, is_retry):
-        print("load_quote_info start..." + "\n")
-        
+        #print("load_quote_info start..." + "\n")
         start = timeit.default_timer()
-
         if(quote is not None and quote['Symbol'] is not None):
             yquery = 'select * from yahoo.finance.quotes where symbol = "' + quote['Symbol'].lower() + '"'
             r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
@@ -229,16 +227,14 @@ class Stockholm(object):
                 quote['Volume'] = quote_info['Volume']
                 quote['MarketCap'] = quote_info['MarketCapitalization']
                 quote['StockExchange'] = quote_info['StockExchange']
-                
             except Exception as e:
                 print("Error: Failed to load stock info... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
                 print(e + "\n")
                 if(not is_retry):
                     time.sleep(1)
-                    load_quote_info(quote, True) ## retry once for network issue
-            
+                    self.load_quote_info(quote, True) ## retry once for network issue
         ## print(quote)
-        print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+        #print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return quote
 
     def load_all_quote_info(self, all_quotes):
@@ -247,7 +243,7 @@ class Stockholm(object):
         start = timeit.default_timer()
         for idx, quote in enumerate(all_quotes):
             print("#" + str(idx + 1))
-            load_quote_info(quote, False)
+            self.load_quote_info(quote, False)
 
         print("load_all_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s")
         return all_quotes
@@ -401,22 +397,19 @@ class Stockholm(object):
         print("data_process end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def data_export(self, all_quotes, export_type_array, file_name):
-        
         start = timeit.default_timer()
         directory = self.export_folder
+        print(directory)    
         if(file_name is None):
             file_name = self.export_file_name
         if not os.path.exists(directory):
             os.makedirs(directory)
-
         if(all_quotes is None or len(all_quotes) == 0):
             print("no data to export...\n")
-        
         if('json' in export_type_array):
             print("start export to JSON file...\n")
             f = io.open(directory + '/' + file_name + '.json', 'w', encoding=self.charset)
             json.dump(all_quotes, f, ensure_ascii=False)
-            
         if('csv' in export_type_array):
             print("start export to CSV file...\n")
             columns = []
@@ -424,7 +417,6 @@ class Stockholm(object):
                 columns = self.get_columns(all_quotes[0])
             writer = csv.writer(open(directory + '/' + file_name + '.csv', 'w', encoding=self.charset))
             writer.writerow(columns)
-
             for quote in all_quotes:
                 if('Data' in quote):
                     for quote_data in quote['Data']:
@@ -440,10 +432,8 @@ class Stockholm(object):
                         except Exception as e:
                             print(e)
                             print("write csv error: " + quote)
-            
         if('mongo' in export_type_array):
             print("start export to MongoDB...\n")
-            
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def file_data_load(self):
@@ -570,7 +560,6 @@ class Stockholm(object):
             test['MA_20'] = quote['Data'][target_idx]['MA_20']
             test['MA_30'] = quote['Data'][target_idx]['MA_30']
             test['Data'] = [{}]
-
             for i in range(1,11):
                 if(target_idx+i >= len(quote['Data'])):
                     print(quote['Name'] + " data is not available for " + str(i) + " day testing..." + "\n")
@@ -591,18 +580,17 @@ class Stockholm(object):
     def data_load(self, start_date, end_date, output_types):
         all_quotes = self.load_all_quote_symbol()
         print("total " + str(len(all_quotes)) + " quotes are loaded..." + "\n")
-        all_quotes = all_quotes
-        ## self.load_all_quote_info(all_quotes)
-        self.load_all_quote_data(all_quotes, start_date, end_date)
-        self.data_process(all_quotes)
-        
+        all_quotes = all_quotes[:10]
+        data=self.load_all_quote_info(all_quotes)
+        print(data)
+        #self.load_all_quote_data(all_quotes, start_date, end_date)
+        #self.data_process(all_quotes)
         self.data_export(all_quotes, output_types, None)
 
     def data_test(self, target_date, test_range, output_types):
         ## loading test methods
         methods = []
         path = self.testfile_path
-        
         ## from mongodb
         if(path == 'mongodb'):
             print("Load testing methods from Mongodb...\n")

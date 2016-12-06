@@ -16,6 +16,7 @@ from functools import partial
 from liteDB import *
 import pandas as pd
 import numpy as np
+DATEFORMAT='%Y-%m-%d'
 class Grab(object):
     def __init__(self, args):
         ## flag of if need to reload all stock data
@@ -52,10 +53,13 @@ class Grab(object):
         ## self.sz399005 = {'Symbol': '399005.SZ', 'Name': '中小板指'}
         ## self.sz399006 = {'Symbol': '399006.SZ', 'Name': '创业板指'}
         #self.collection_name = 'testing_method'
-        self.all_quotes_fail=[]
+
+        self.all_quotes_fail=[['Symbol','Name']]
         self.all_quotes_data=[]
         self.update=args.update
         main(args)
+        self.updateone=args.updateone
+        self.symbol=args.symbol
         
     def load_all_quote_symbol(self):
         print("load_all_quote_symbol start..." + "\n")
@@ -125,61 +129,28 @@ class Grab(object):
                 quote['Volume'] = quote_info['Volume']
                 quote['MarketCap'] = quote_info['MarketCapitalization']
                 quote['StockExchange'] = quote_info['StockExchange']
-                quote['BookValue'] = quote_info['BookValue']
-                quote['YearHigh'] = quote_info['YearHigh']
-                quote['YearLow'] = quote_info['YearLow']
-                self.all_quotes_info.append(quote)
             except Exception as e:
                 print("Error: Failed to load stock info... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
                 print(e + "\n")
                 if(not is_retry):
                     time.sleep(1)
-                    load_quote_info(quote, True) ## retry once for network issue
-
+                    self.load_quote_info(quote, True) ## retry once for network issue
         #print(quote)
         #print("load_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         return quote
 
     def load_all_quote_info(self, all_quotes):
         print("load_all_quote_info start...")
-
+        
         start = timeit.default_timer()
         for idx, quote in enumerate(all_quotes):
-            print("#" + str(idx + 1),)
-            self.load_quote_info(quote,False)
+            print("#" + str(idx + 1))
+            self.load_quote_info(quote, False)
 
         print("load_all_quote_info end... time cost: " + str(round(timeit.default_timer() - start)) + "s")
         return all_quotes
 
-    def load_all_between(self, quote, start_date, end_date, is_retry, counter):
-        print("load_all_between start..." + "\n")
-
-        start = timeit.default_timer()
-
-        if(quote is not None ):        
-            yquery = 'select * from yahoo.finance.historicaldata where startDate = "' + start_date + '" and endDate = "' + end_date + '"'
-            r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
-            try:
-                r = requests.get(self.yql_url, params=r_params)
-                rjson = r.json()
-                print("quote data rjson\n",rjson)
-                quote_data = rjson['query']['results']['quote']
-                quote_data.reverse()
-                quote['Data'] = quote_data
-                print("load all data bettween : \n",quote_data)
-                #self.data_save_one(quote)
-                if(not is_retry):
-                    counter.append(1)          
-            except:
-                print("Error: Failed to load stock data...  \n")
-                if(not is_retry):
-                    time.sleep(2)
-                    self.load_all_between(quote, start_date, end_date, True, counter) ## retry once for network issue
-
-        print("load_all_quote_data end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
-        return quote
-    
-    def get_quote_hist(self,symbol):
+    def get_whole_quote_hist(self,symbol):
         '''
         symbol: string, 600000.SS
         '''
@@ -187,8 +158,8 @@ class Grab(object):
         data=[]
         while True:
             start_datetime=now
-            start_date=start_datetime.strftime('%Y-%m-%d')
-            end_date=(start_datetime-timedelta(365)).strftime('%Y-%m-%d')
+            start_date=start_datetime.strftime(DATEFORMAT)
+            end_date=(start_datetime-timedelta(365)).strftime(DATEFORMAT)
             yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol.upper() + '" and startDate = "' + end_date + '" and endDate = "' + start_date + '"'
             r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
             quote_data=[]
@@ -208,18 +179,61 @@ class Grab(object):
         df=df[['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']]
         df=df.sort(columns='Date',ascending=False) 
         return df
+    
+    
+    def get_quote_hist(self,symbol):
+        '''
+        symbol: string, 600000.SS
+        '''
+        now=datetime.now()
+        data=[]
+        pivot=datetime.strptime(self.start_date,DATEFORMAT)
+        stop=False
+        while True:
+            end_datetime=now
+            start_datetime=end_datetime-timedelta(365)
+            start_date=start_datetime.strftime(DATEFORMAT)
+            end_date=end_datetime.strftime(DATEFORMAT)
+            if start_datetime <= pivot:
+                start_date=self.start_date
+                stop=True
+            quote_data=self.get_oneyear_quote(symbol,start_date,end_date)
+            #yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol.upper() + '" and startDate = "' + end_date + '" and endDate = "' + start_date + '"'
+            #r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            #quote_data=[]
+            #try:
+            #    r = requests.get(self.yql_url, params=r_params)
+            #    rjson = r.json()
+            #    quote_data = rjson['query']['results']['quote']
+            #    quote_data.reverse()
+            #    print("load symbol "+symbol + ' at year '+start_date)
+            #except:
+            #    print("Error: Failed to load stock data... " + symbol+ " "+ start_date+"\n")
+            #    break
+            data=data+quote_data
+            if stop == True:
+                break
+            now=now-timedelta(365)
+        df=pd.DataFrame.from_dict(data)
+        df=df.drop_duplicates()
+        df=df[['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']]
+        df=df.sort(columns='Date',ascending=False) 
+        return df
 
-    def get_oneyear_quote(self,symbol):
+    def get_oneyear_quote(self,symbol,start_date,end_date):
         '''
         symbol: string, 600000.SS
         start_date: datetime
         '''
-        start=self.start_date.strftime('%Y-%m-%d')
-        end=(start-timedelta(365)).strftime('%Y-%m-%d')
+        #start=datetime.strptime(start_date,DATEFORMAT)
+        #end=datetime.strptime(end_date,DATEFORMAT)
+        #end=(start-timedelta(365)).strftime(DATEFORMAT)
         quote={}
         quote['Symbol']=symbol
         quote['Name']=''
-        return self.load_quote_data(quote,end_date,start_date,True,[])
+        self.load_quote_data(quote,start_date,end_date,True,[])
+        print('load '+symbol +'    '+ start_date+'-----'+end_date )
+        return quote['Data']
 
     def load_quote_data(self, quote, start_date, end_date, is_retry, counter):
         ## print("load_quote_data start..." + "\n")
@@ -242,7 +256,7 @@ class Grab(object):
                     counter.append(1)          
             except:
                 print("Error: Failed to load stock data... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
-                self.all_quotes_fail.append(quote['Symbol'])
+                self.all_quotes_fail.append([quote['Symbol'],quote['Name']])
                 if(not is_retry):
                     time.sleep(2)
                     self.load_quote_data(quote, start_date, end_date, True, counter) ## retry once for network issue
@@ -279,24 +293,26 @@ class Grab(object):
             print("start export to CSV file...\n")
             columns = []
             if(all_quotes is not None and len(all_quotes) > 0):
-                columns = self.get_columns(all_quotes[0])
-            writer = csv.writer(open(directory + '/' + file_name + '.csv', 'w', encoding=self.charset))
-            writer.writerow(columns)
-            for quote in all_quotes:
-                if('Data' in quote):
-                    for quote_data in quote['Data']:
-                        try:
-                            line = []
-                            for column in columns:
-                                if(column.find('data.') > -1):
-                                    if(column[5:] in quote_data):
-                                        line.append(quote_data[column[5:]])
-                                else:
-                                    line.append(quote[column])
-                            writer.writerow(line)
-                        except Exception as e:
-                            print(e)
-                            print("write csv error: " + quote)
+                df=pd.DataFrame.from_dict(all_quotes)
+                df.to_csv(directory + '/' + file_name + '.csv')
+            #    columns = self.get_columns(all_quotes[0])
+            #writer = csv.writer(open(directory + '/' + file_name + '.csv', 'w', encoding=self.charset))
+            #writer.writerow(columns)
+            #for quote in all_quotes:
+            #    if('Data' in quote):
+            #        for quote_data in quote['Data']:
+            #            try:
+            #                line = []
+            #                for column in columns:
+            #                    if(column.find('data.') > -1):
+            #                        if(column[5:] in quote_data):
+            #                            line.append(quote_data[column[5:]])
+            #                    else:
+            #                        line.append(quote[column])
+            #                writer.writerow(line)
+            #            except Exception as e:
+            #                print(e)
+            #                print("write csv error: " + quote)
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def get_columns(self, quote):
@@ -320,16 +336,26 @@ class Grab(object):
         return st
 
     def data_load(self, start_date, end_date, output_types):
-        #all_quotes = self.load_all_quote_symbol()
-        df=pd.read_csv('allsymbols.csv')
-        all_quotes=df.to_dict('records')
+        all_quotes = self.load_all_quote_symbol()
+        #df=pd.read_csv('allsymbols.csv')
+        #all_quotes=df.to_dict('records')
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
         some_quotes = all_quotes
+        #self.load_all_quote_info(some_quotes)
         self.load_all_quote_data(some_quotes, start_date, end_date)
         fails=pd.DataFrame(self.all_quotes_fail,columns=['Symbol'])
         fails.to_csv('fail.csv')
         self.data_export(all_quotes, output_types, None)
+        
+    def try_elim_fail(self,start_date,end_date,output_types):
+        df=pd.read_csv('fail.csv')
+        all_quotes=df.to_dict('records')
+        some_quotes = all_quotes
+        self.load_all_quote_data(some_quotes, start_date, end_date)
+        fails=pd.DataFrame(self.all_quotes_fail,columns=['Symbol'])
+        fails.to_csv('fail2.csv')
+
 
     def convert_allinone_dtyp(self):
         #print("all in one: dtypes before**********************************\n",self.allInOne.dtypes)
@@ -385,11 +411,17 @@ class Grab(object):
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
         #init() 
-        print("************ ",self.update)
         if self.update == 'Y':
             self.data_load(self.start_date, self.end_date, output_types)
         #res=self.get_oneyear_quote('601009.SS')
         #res.to_csv('ss.csv')
+        #res=self.get_oneyear_quote('601009.SS')
+        #self.try_elim_fail(self.start_date, self.end_date, output_types)
+        if self.updateone == 'all':
+            res=self.get_whole_quote_hist(self.symbol)
+        elif self.updateone == 'range' :
+            res=self.get_quote_hist(self.symbol)
+        res.to_csv('ss.csv')
         #print(res)
         ## loading stock data
         #if(self.reload_data == 'Y'):

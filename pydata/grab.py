@@ -55,6 +55,7 @@ class Grab(object):
         self.all_quotes_fail=[]
         self.all_quotes_data=[]
         self.update=args.update
+        main(args)
         
     def load_all_quote_symbol(self):
         print("load_all_quote_symbol start..." + "\n")
@@ -387,7 +388,7 @@ class Grab(object):
         print("************ ",self.update)
         if self.update == 'Y':
             self.data_load(self.start_date, self.end_date, output_types)
-        res=self.get_oneyear_quote('601009.SS')
+        #res=self.get_oneyear_quote('601009.SS')
         #res.to_csv('ss.csv')
         #print(res)
         ## loading stock data

@@ -347,7 +347,7 @@ def init():
     DATETIME_FORMAT='%Y-%m-%d %H-%M-%f'
     #数据库文件绝句路径
     global DB_FILE_PATH
-    DB_FILE_PATH = 'finance.db'
+    DB_FILE_PATH = '~/pyt/pydata/pydata/data.db'
     #数据库表名称
     global TABLE_NAME
     TABLE_NAME = 'Stocks'
@@ -368,17 +368,18 @@ def init():
     enginePD=get_enginePD(DB_FILE_PATH)
     global dbConnPD
     dbConnPD=enginePD.connect()
-    
 
-def main():
+def main(args):
    init()
+   print('********** start_date',args.start_date)
+   if args.queryDB == 'Y':
+       df=fetchallPD(args.start_date,args.end_date)
+       df.to_csv('query.csv')
    #fetchall_test(TABLE_NAME)
-   #fetchallPD("SELECT * FROM '000001.SS' order by 'Volume' DESC")
    #print('#' * 50)
    #fetchone_test()
    #print('#' * 50)
    #update_test()
-   #fetchall_test()
    #print('#' * 50)
    #delete_test(TABLE_NAME)
    #fetchall_test()

@@ -22,16 +22,19 @@ _default = dict(
     db_name = 'stockholm',
     methods = '',
     update='N',
-    update_one='N'
+    update_one='N',
+    queryDB='N'
     )
 
-parser = argparse.ArgumentParser(description='A stock crawler and portfolio testing framework.') 
+parser = argparse.ArgumentParser(description='A crawler and portfolio testing framework.') 
 
 parser.add_argument('--reload', type=str, default=_default['reload_data'], dest='reload_data', help='Reload the stock data or not (Y/N), Default: %s' % _default['reload_data'])
 
 parser.add_argument('--updateone', type=str, default=_default['update_one'], dest='update_one', help='get one quote history not (Y/N), Default: %s' % _default['update_one'])
 
 parser.add_argument('--update', type=str, default=_default['update'], dest='update', help='Update all quotes data between given date not (Y/N), Default: %s' % _default['update'])
+
+parser.add_argument('--queryDB', type=str, default=_default['queryDB'], dest='queryDB', help='query all quotes data directly from DB between given date  (Y/N), Default: %s' % _default['queryDB'])
 
 parser.add_argument('--portfolio', type=str, default=_default['gen_portfolio'], dest='gen_portfolio', help='Generate the portfolio or not (Y/N), Default: %s' % _default['gen_portfolio'])
 

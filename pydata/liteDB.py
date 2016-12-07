@@ -70,12 +70,13 @@ def get_conn(path):
     else:
         conn = None
         print('内存上面:[:memory:]')
-        return sqlite3.connect(':memory:')
+        return sqlite3.connect(':memory:',check_same_thread=False)
 
 def get_enginePD(path):
+    print('**************DB path *******',path)
     if os.path.exists(path) and os.path.isfile(path):
         print('硬盘上面:[{}]'.format(path))
-        enginePD=create_engine('sqlite:///'+os.path.expanduser('~')+'/python/pydata/pydata/'+path)
+        enginePD=create_engine('sqlite:///'+os.path.expanduser('~')+'/pyt/pydata/pydata/'+path)
         #onnPD=enginePD.connect()
         return enginePD
     else:
@@ -347,7 +348,7 @@ def init():
     DATETIME_FORMAT='%Y-%m-%d %H-%M-%f'
     #数据库文件绝句路径
     global DB_FILE_PATH
-    DB_FILE_PATH = '~/pyt/pydata/pydata/data.db'
+    DB_FILE_PATH = 'data.db'
     #数据库表名称
     global TABLE_NAME
     TABLE_NAME = 'Stocks'
@@ -362,7 +363,6 @@ def init():
     #向数据库表中插入数据
     #save_test()
     #save_test(TABLE_NAME,data)
-
     # use pandas sqlite API to store the data
     global enginePD
     enginePD=get_enginePD(DB_FILE_PATH)

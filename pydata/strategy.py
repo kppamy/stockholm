@@ -59,7 +59,8 @@ def top_industry(data,n=3):
         mark_ind=marks[:,x]
         mark_sort=mark_ind.sort_values()
         tmp=mark_sort[-n:]
-        print("\n########################top "+ str(n)+ " of "+x+" : \n",tmp)
+        print(x)
+        print("\n########################top "+ str(n)+ " of ",(x)," :\n",tmp)
         res=res.append(tmp.reset_index())
     return res
 
@@ -99,7 +100,7 @@ def away51Top(data,n=3):
     r51=away51(data,'2016-08-12')
     res=r51.merge(tops,on='Symbol')
     res=res[['Date', 'Symbol', 'Name','industry_name','ma51', 'mark_y']]
-    print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
+    #print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     res=res.sort('industry_name')
     return res
 
@@ -114,6 +115,6 @@ def run():
     data=data.drop('Unnamed: 0',axis=1)
     data=data.drop('Unnamed: 0.1',axis=1)
     out=away51Top(data)
-    print(out)
+    #print(out)
 
 #run()

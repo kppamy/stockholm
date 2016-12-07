@@ -214,6 +214,13 @@ class Grab(object):
             if stop == True:
                 break
             now=now-timedelta(365)
+        return self.convert2DataFrame(data)
+
+    def convert2DataFrame(self,data):
+        '''
+        data: [dict1,dict2,...] dict-like list
+        return DataFrame
+        '''
         df=pd.DataFrame.from_dict(data)
         df=df.drop_duplicates()
         df=df[['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']]
@@ -252,6 +259,7 @@ class Grab(object):
                 quote['Data'] = quote_data
                 #print("one quote data from yahoo:\n",quote_data)
                 self.data_save_one(quote)
+                self.all_quotes_data=self.load_quote_data+quote_data
                 if(not is_retry):
                     counter.append(1)          
             except:
@@ -336,17 +344,20 @@ class Grab(object):
         return st
 
     def data_load(self, start_date, end_date, output_types):
-        all_quotes = self.load_all_quote_symbol()
-        #df=pd.read_csv('allsymbols.csv')
-        #all_quotes=df.to_dict('records')
+        #all_quotes = self.load_all_quote_symbol()
+        df=pd.read_csv('allsymbols.csv')
+        all_quotes=df.to_dict('records')
         #self.convert_allinone_dtyp()
         #writeSqlPD(self.allInOne,'MKTNewest')
-        some_quotes = all_quotes
+        some_quotes = all_quotes[:4]
         #self.load_all_quote_info(some_quotes)
         self.load_all_quote_data(some_quotes, start_date, end_date)
-        fails=pd.DataFrame(self.all_quotes_fail,columns=['Symbol'])
+        df=self.convert2DataFrame(self.all_quotes_data)
+        df.to_csv('crawl.csv')
+        fails=pd.DataFrame(self.all_quotes_fail,columns=['Symbol','Name'])
         fails.to_csv('fail.csv')
-        self.data_export(all_quotes, output_types, None)
+        return df
+        #self.data_export(all_quotes, output_types, None)
         
     def try_elim_fail(self,start_date,end_date,output_types):
         df=pd.read_csv('fail.csv')
@@ -421,7 +432,7 @@ class Grab(object):
             res=self.get_whole_quote_hist(self.symbol)
         elif self.updateone == 'range' :
             res=self.get_quote_hist(self.symbol)
-        res.to_csv('ss.csv')
+        #res.to_csv('ss.csv')
         #print(res)
         ## loading stock data
         #if(self.reload_data == 'Y'):

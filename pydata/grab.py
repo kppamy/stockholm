@@ -17,6 +17,7 @@ from liteDB import *
 import pandas as pd
 import numpy as np
 DATEFORMAT='%Y-%m-%d'
+DATA_HEAD=['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']
 class Grab(object):
     def __init__(self, args):
         ## flag of if need to reload all stock data
@@ -174,12 +175,7 @@ class Grab(object):
                 break
             data=data+quote_data
             now=now-timedelta(365)
-        df=pd.DataFrame.from_dict(data)
-        df=df.drop_duplicates()
-        df=df[['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']]
-        df=df.sort(columns='Date',ascending=False) 
-        return df
-    
+        return self.convert2DataFrame(data)
     
     def get_quote_hist(self,symbol):
         '''
@@ -197,19 +193,19 @@ class Grab(object):
             if start_datetime <= pivot:
                 start_date=self.start_date
                 stop=True
-            quote_data=self.get_oneyear_quote(symbol,start_date,end_date)
-            #yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol.upper() + '" and startDate = "' + end_date + '" and endDate = "' + start_date + '"'
-            #r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
-            #quote_data=[]
-            #try:
-            #    r = requests.get(self.yql_url, params=r_params)
-            #    rjson = r.json()
-            #    quote_data = rjson['query']['results']['quote']
-            #    quote_data.reverse()
-            #    print("load symbol "+symbol + ' at year '+start_date)
-            #except:
-            #    print("Error: Failed to load stock data... " + symbol+ " "+ start_date+"\n")
-            #    break
+            #quote_data=self.get_oneyear_quote(symbol,start_date,end_date)
+            yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol.upper() + '" and startDate = "' + start_date + '" and endDate = "' + end_date + '"'
+            r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            quote_data=[]
+            try:
+                r = requests.get(self.yql_url, params=r_params)
+                rjson = r.json()
+                quote_data = rjson['query']['results']['quote']
+                quote_data.reverse()
+                print("load symbol "+symbol + ' at year '+start_date)
+            except:
+                print("Error: Failed to load stock data... " + symbol+ " "+ start_date+"\n")
+                break
             data=data+quote_data
             if stop == True:
                 break
@@ -221,9 +217,11 @@ class Grab(object):
         data: [dict1,dict2,...] dict-like list
         return DataFrame
         '''
+        if len(data)==0:
+            return None
         df=pd.DataFrame.from_dict(data)
         df=df.drop_duplicates()
-        df=df[['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']]
+        df=df[DATA_HEAD]
         df=df.sort(columns='Date',ascending=False) 
         return df
 
@@ -259,7 +257,7 @@ class Grab(object):
                 quote['Data'] = quote_data
                 #print("one quote data from yahoo:\n",quote_data)
                 self.data_save_one(quote)
-                self.all_quotes_data=self.load_quote_data+quote_data
+                self.all_quotes_data=self.all_quotes_data+quote_data
                 if(not is_retry):
                     counter.append(1)          
             except:
@@ -422,8 +420,9 @@ class Grab(object):
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
         #init() 
+        res=pd.DataFrame([],columns=DATA_HEAD)
         if self.update == 'Y':
-            self.data_load(self.start_date, self.end_date, output_types)
+            res=self.data_load(self.start_date, self.end_date, output_types)
         #res=self.get_oneyear_quote('601009.SS')
         #res.to_csv('ss.csv')
         #res=self.get_oneyear_quote('601009.SS')
@@ -432,7 +431,8 @@ class Grab(object):
             res=self.get_whole_quote_hist(self.symbol)
         elif self.updateone == 'range' :
             res=self.get_quote_hist(self.symbol)
-        #res.to_csv('ss.csv')
+            print(res)
+        res.to_csv('ss.csv')
         #print(res)
         ## loading stock data
         #if(self.reload_data == 'Y'):

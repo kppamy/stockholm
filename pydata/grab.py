@@ -17,7 +17,7 @@ from liteDB import *
 import pandas as pd
 import numpy as np
 DATEFORMAT='%Y-%m-%d'
-DATA_HEAD=['Date', 'Open', 'High','Low','Close','Volume','Adj_Close']
+DATA_HEAD=['Date', 'Open', 'High','Low','Close','Volume','Adj_Close','Symbol']
 class Grab(object):
     def __init__(self, args):
         ## flag of if need to reload all stock data
@@ -220,9 +220,9 @@ class Grab(object):
         if len(data)==0:
             return None
         df=pd.DataFrame.from_dict(data)
-        df=df.drop_duplicates()
+        #df=df.drop_duplicates()
         df=df[DATA_HEAD]
-        df=df.sort(columns='Date',ascending=False) 
+        #df=df.sort(columns='Date',ascending=False) 
         return df
 
     def get_oneyear_quote(self,symbol,start_date,end_date):
@@ -257,7 +257,7 @@ class Grab(object):
                 quote['Data'] = quote_data
                 #print("one quote data from yahoo:\n",quote_data)
                 self.data_save_one(quote)
-                self.all_quotes_data=self.all_quotes_data+quote_data
+                #self.all_quotes_data=self.all_quotes_data+quote_data
                 if(not is_retry):
                     counter.append(1)          
             except:
@@ -298,27 +298,28 @@ class Grab(object):
         if('csv' in export_type_array):
             print("start export to CSV file...\n")
             columns = []
-            if(all_quotes is not None and len(all_quotes) > 0):
-                df=pd.DataFrame.from_dict(all_quotes)
-                df.to_csv(directory + '/' + file_name + '.csv')
-            #    columns = self.get_columns(all_quotes[0])
+            #if(all_quotes is not None and len(all_quotes) > 0):
+#                columns = self.get_columns(all_quotes[0])
             #writer = csv.writer(open(directory + '/' + file_name + '.csv', 'w', encoding=self.charset))
             #writer.writerow(columns)
-            #for quote in all_quotes:
-            #    if('Data' in quote):
-            #        for quote_data in quote['Data']:
-            #            try:
-            #                line = []
-            #                for column in columns:
-            #                    if(column.find('data.') > -1):
-            #                        if(column[5:] in quote_data):
-            #                            line.append(quote_data[column[5:]])
-            #                    else:
-            #                        line.append(quote[column])
-            #                writer.writerow(line)
-            #            except Exception as e:
-            #                print(e)
-            #                print("write csv error: " + quote)
+            self.all_quotes_data=[]
+            for quote in all_quotes:
+                if('Data' in quote):
+                    self.all_quotes_data=self.all_quotes_data+quote['Data']
+
+                    #for quote_data in quote['Data']:
+                    #    try:
+                    #        line = []
+                    #        for column in columns:
+                    #            if(column.find('data.') > -1):
+                    #                if(column[5:] in quote_data):
+                    #                    line.append(quote_data[column[5:]])
+                    #            else:
+                    #                line.append(quote[column])
+                    #        writer.writerow(line)
+                    #    except Exception as e:
+                    #        print(e)
+                    #        print("write csv error: " + quote)
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def get_columns(self, quote):
@@ -345,34 +346,31 @@ class Grab(object):
         #all_quotes = self.load_all_quote_symbol()
         df=pd.read_csv('allsymbols.csv')
         all_quotes=df.to_dict('records')
-        #self.convert_allinone_dtyp()
-        #writeSqlPD(self.allInOne,'MKTNewest')
-        some_quotes = all_quotes[:4]
+        some_quotes = all_quotes[:]
         #self.load_all_quote_info(some_quotes)
         self.load_all_quote_data(some_quotes, start_date, end_date)
+        self.data_export(some_quotes, output_types, None)
         df=self.convert2DataFrame(self.all_quotes_data)
-        df.to_csv('crawl.csv')
-        fails=pd.DataFrame(self.all_quotes_fail,columns=['Symbol','Name'])
+        fails=pd.DataFrame(self.all_quotes_fail,columns=['symbol','name'])
         fails.to_csv('fail.csv')
         return df
-        #self.data_export(all_quotes, output_types, None)
         
     def try_elim_fail(self,start_date,end_date,output_types):
         df=pd.read_csv('fail.csv')
         all_quotes=df.to_dict('records')
         some_quotes = all_quotes
         self.load_all_quote_data(some_quotes, start_date, end_date)
-        fails=pd.DataFrame(self.all_quotes_fail,columns=['Symbol'])
+        fails=pd.dataframe(self.all_quotes_fail,columns=['symbol'])
         fails.to_csv('fail2.csv')
 
 
     def convert_allinone_dtyp(self):
-        #print("all in one: dtypes before**********************************\n",self.allInOne.dtypes)
-        self.allInOne['code']=self.allInOne['code'].astype('int')
-        self.allInOne['name']=self.allInOne['name'].astype('str')
-        self.allInOne['ticktime']=pd.to_datetime(self.allInOne['ticktime'])
-        self.allInOne[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']]=self.allInOne[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']].astype('float')
-        #print("all in one after ajust the dtypes:\n",self.allInOne.dtypes)
+        #print("all in one: dtypes before**********************************\n",self.allinone.dtypes)
+        self.allinone['code']=self.allinone['code'].astype('int')
+        self.allinone['name']=self.allinone['name'].astype('str')
+        self.allinone['ticktime']=pd.to_datetime(self.allinone['ticktime'])
+        self.allinone[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']]=self.allinone[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']].astype('float')
+        #print("all in one after ajust the dtypes:\n",self.allinone.dtypes)
 
     def convert_onestock_dtype(self,quote):
        #print("single stock dtype before adjusting:\n",quote.dtypes)
@@ -419,22 +417,17 @@ class Grab(object):
             output_types.append("csv")
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
-        #init() 
         res=pd.DataFrame([],columns=DATA_HEAD)
         if self.update == 'Y':
             res=self.data_load(self.start_date, self.end_date, output_types)
-        #res=self.get_oneyear_quote('601009.SS')
-        #res.to_csv('ss.csv')
-        #res=self.get_oneyear_quote('601009.SS')
-        #self.try_elim_fail(self.start_date, self.end_date, output_types)
         if self.updateone == 'all':
             res=self.get_whole_quote_hist(self.symbol)
         elif self.updateone == 'range' :
             res=self.get_quote_hist(self.symbol)
             print(res)
-        res.to_csv('ss.csv')
-        #print(res)
+        res.to_csv('crawl.csv')
         ## loading stock data
         #if(self.reload_data == 'Y'):
         #    self.data_load(self.start_date, self.end_date, output_types)
+        #self.try_elim_fail(self.start_date, self.end_date, output_types)
 

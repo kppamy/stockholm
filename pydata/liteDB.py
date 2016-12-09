@@ -371,7 +371,6 @@ def init():
 
 def main(args):
    init()
-   print('********** start_date',args.start_date)
    if args.queryDB == 'Y':
        df=fetchallPD(args.start_date,args.end_date)
        df.to_csv('query.csv')

@@ -10,7 +10,7 @@ def get_date_str(offset):
 _default = dict(
     reload_data = 'Y',
     gen_portfolio = 'N',
-    output_type = 'json',
+    output_type = 'csv',
     charset = 'utf-8',
     test_date_range = 60,
     start_date = get_date_str(-360),

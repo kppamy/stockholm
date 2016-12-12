@@ -28,14 +28,6 @@ def main():
         print('Stockholm is starting...\n')
         grab=Grab(args)
         grab.run()
-        #dic={}
-        #all_quotes=grab.read_csv_file(dic)
-
-        ##all_quotes=df.to_dict('records')
-        #stockh = Pydata(args)
-        #stockh.run(all_quotes)
-        #print('Stockholm is done...\n')
-        #return all_quotes
 
 if __name__ == '__main__':
     main()

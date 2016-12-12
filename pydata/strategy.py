@@ -5,44 +5,19 @@ import io
 import os
 import csv
 import re
+import option
 #from pymongo import MongoClient
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 from liteDB import *
 import pandas as pd
 import numpy as np
+
 DATEFORMAT='%Y-%m-%d'
 DATA_HEAD=['Date','Open','High','Low','Close','Volume','Adj_Close','Symbol']
 DATA_HEAD_ALL=[['Industry_Code', 'Industry_Name', 'Code', 'Name', 'Area','Concept_Code', 'Concept_Name']]
 INPUT_DATA_FILE='query.csv'
 OUTPUT_DATA_FILE='data.csv'
-def __init__(args):
-    ## flag of if need to reload all stock data
-    self.reload_data = args.reload_data
-    ## type of output file json/csv or both
-    self.output_type = args.output_type
-    ## charset of output file utf-8/gbk
-    self.charset = args.charset
-    ## portfolio testing date range(# of days)
-    #self.test_date_range = args.test_date_range
-    ## stock data loading start date(e.g. 2014-09-14)
-    self.start_date = args.start_date
-    ## stock data loading end date
-    self.end_date = args.end_date
-    ## portfolio generating target date
-    self.target_date = args.target_date
-    ## thread number
-    self.thread = args.thread
-    ## data file store path
-    if(args.store_path =='USER_HOME/tmp/pydata_export'):
-        self.export_folder = os.path.expanduser('~') +'/tmp/pydata_export'
-    else:
-        self.export_folder = args.store_path
-        ## for getting quote symbols
-        self.all_quotes_url ='http://money.finance.sina.com.cn/d/api/openapi_proxy.php'
-        ## for loading quote data
-        self.yql_url ='http://query.yahooapis.com/v1/public/yql'
-        ## export file name
 
 def mark_single_quote(quote):
     df=quote
@@ -137,9 +112,9 @@ def basics_cal(all_quotes):
     print("process is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
     return all_marks
 
-def away51Top(data,n=3):
+def away51Top(data,bench,n=3):
     tops=top_industry(data,n)
-    r51=away51(data,'2016-12-02')
+    r51=away51(data,bench)
     res=r51.merge(tops,on='Symbol')
     res=res[['Date','Symbol','Name','Industry_Name','ma51','mark_y']]
     #print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
@@ -151,12 +126,28 @@ def away51(m51,date):
     return r51
 
 def run():
-    data=pd.read_csv(OUTPUT_DATA_FILE)
+    args=option.parser.parse_args()
+
+    data=pd.DataFrame([],columns=DATA_HEAD_ALL)
+    if args.methods == 'basic':
+        print('*****basic data processing *********')
+        data=initDataSet(INPUT_DATA_FILE)
+        basics_cal(data)
+        mark_all_down(data)
+    elif args.methods == 'away51':
+        data=initDataSet(OUTPUT_DATA_FILE)
+        data=data.drop('Unnamed: 0',axis=1)
+        data=data.drop('Unnamed: 0.1',axis=1)
+        data.Date=pd.to_datetime(data.Date)
+        out=away51Top(data,args.end_date)
+        print(out)
     #basics_cal(data)
     #mark_all_down(data)
     #data.to_csv(OUTPUT_DATA_FILE)
-    data=data.drop('Unnamed: 0',axis=1)
-    data=data.drop('Unnamed: 0.1',axis=1)
-    out=away51Top(data)
-    print(out)
-run()
+    data=pd.read_csv(OUTPUT_DATA_FILE)
+
+def initDataSet(file):
+    return pd.read_csv(file)
+
+if __name__ == '__main__':
+    run()

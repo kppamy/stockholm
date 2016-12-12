@@ -129,6 +129,7 @@ def create_table(conn, sql):
 def writeSqlPD(dfdata,table):
     init()
     dfdata.to_sql(table,enginePD,if_exists='replace')
+
 def updateSqlPD(dfdata,table):
     dfdata.to_sql(table,enginePD,if_exists='append')
 ###############################################################

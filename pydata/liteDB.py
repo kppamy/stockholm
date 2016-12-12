@@ -13,6 +13,7 @@
 
 import sqlite3
 import os
+import timeit
 from sqlalchemy import create_engine
 import pandas as pd
 '''SQLite数据库是一款非常小巧的嵌入式开源数据库软件，也就是说
@@ -73,7 +74,6 @@ def get_conn(path):
         return sqlite3.connect(':memory:',check_same_thread=False)
 
 def get_enginePD(path):
-    print('**************DB path *******',path)
     if os.path.exists(path) and os.path.isfile(path):
         print('硬盘上面:[{}]'.format(path))
         enginePD=create_engine('sqlite:///'+os.path.expanduser('~')+'/pyt/pydata/pydata/'+path)
@@ -127,6 +127,7 @@ def create_table(conn, sql):
     else:
         print('the [{}] is empty or equal None!'.format(sql))
 def writeSqlPD(dfdata,table):
+    init()
     dfdata.to_sql(table,enginePD,if_exists='replace')
 def updateSqlPD(dfdata,table):
     dfdata.to_sql(table,enginePD,if_exists='append')
@@ -296,6 +297,8 @@ def fetchOnePD(table,start_date=None,end_date=None):
 
 ''' date format : 2011-07-01'''
 def fetchallPD(start_date,end_date):
+    print("start fetch all quote data from DB: "+start_date+"  ---------  "+end_date)
+    start = timeit.default_timer()
     tables=pd.read_sql('Select name FROM sqlite_master where type="table"',dbConnPD)
     symbols=tables.name
     fil=[x for x in symbols if x[-3]=='.']
@@ -309,6 +312,7 @@ def fetchallPD(start_date,end_date):
         count=count+1
         print("fetch " + x + " from DB")
     print("fetch "+ str(count) +" quotes from DB")
+    print("fetch DB is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
     return df 
 
 def fetchone_test():
@@ -366,6 +370,7 @@ def init():
     # use pandas sqlite API to store the data
     global enginePD
     enginePD=get_enginePD(DB_FILE_PATH)
+    print('**************DB init *******')
     global dbConnPD
     dbConnPD=enginePD.connect()
 

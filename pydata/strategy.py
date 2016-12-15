@@ -81,6 +81,26 @@ def top_industry(data,n=3):
         res=res.append(tmp.reset_index())
     return res
 
+def rank_industry(symbol,industry=None):
+    """
+    get an industry mark rank through a stock
+    symbol:string, the symbol of the code
+    """
+    data2=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
+    gb=data2[['Symbol','Name','Industry_Name','mark']].groupby(['Symbol','Name','Industry_Name']).sum()
+    gb=gb.reset_index()
+    ind=industry
+    if industry == None:
+        ind=gb[gb.Symbol==symbol]['Industry_Name']
+        res=gb[gb.Industry_Name == ind.values[0]]
+    else:
+        res=gb[gb.Industry_Name == industry]
+    res=res.sort_values(by='mark',ascending=False)
+    res.reindex()
+    res['ranks']=res['mark'].rank(method='first')
+    res.to_csv('rank'+ind+'.csv')
+    print(res)
+
 def basics_cal(all_quotes):
     start = timeit.default_timer()
     st=all_quotes
@@ -141,6 +161,8 @@ def run():
         data.Date=pd.to_datetime(data.Date)
         out=away51Top(data,args.end_date)
         print(out)
+    elif args.methods=='rank':
+        rank_industry(args.symbol,args.industry)
     #basics_cal(data)
     #mark_all_down(data)
     #data.to_csv(OUTPUT_DATA_FILE)

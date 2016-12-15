@@ -24,7 +24,8 @@ _default = dict(
     update='N',
     queryDB='N',
     updateone='N',
-    symbol=''
+    symbol='',
+    industry=''
     )
 
 parser = argparse.ArgumentParser(description='A crawler and portfolio testing framework.') 
@@ -61,6 +62,7 @@ parser.add_argument('--testfile', type=str, default=_default['testfile_path'], d
 parser.add_argument('--dbname', type=str, default=_default['db_name'], dest='db_name', help='MongoDB DB name, Default: %s' % _default['db_name'])
 
 parser.add_argument('--methods', type=str, default=_default['methods'], dest='methods', help='Target methods for back testing, Default: %s' % _default['methods'])
+parser.add_argument('--industry', type=str, default=_default['industry'], dest='industry', help='Target industry for analyzing, Default: %s' % _default['industry'])
 
 def main():
     args = parser.parse_args()

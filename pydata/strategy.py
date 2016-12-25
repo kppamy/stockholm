@@ -26,6 +26,28 @@ def mark_single_quote(quote):
     df.loc[(df.v_change<0) & (df.p_change>0),'mark']=1
     df.loc[(df.v_change<0) & (df.p_change<0),'mark']=-1
     df.loc[(df.v_change>0) & (df.p_change<0),'mark']=-2
+    
+def group_cal(df):
+    df.set_index('Date',inplace=True)
+    df['v_change']=df['Volume'].pct_change()
+    df['p_change']=df['Close'].pct_change()
+    mark_single_quote(df)
+    df['ma51']=df['Close'].rolling(51).mean()
+    df['v6']=df['Volume'].rolling(6).mean()
+    df.fillna(method='ffill',inplace=True)
+    return df
+
+def group_process():
+    start=timeit.default_timer()
+    d1=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
+    d1.reset_index(inplace=True)
+    q=pd.DataFrame.from_csv('crawl.csv')
+    data=pd.concat((d1,q),ignore_index=True)
+    data.Date=pd.to_datetime(data.Date)
+    tmp=data.groupby('Symbol').apply(group_cal)
+    tmp.to_csv('group.csv')
+    end=timeit.default_timer()
+    print("basical group compute takes "+str(round(end-start))+"s ")
 
 def get_allDB_data():
     data=pd.read_csv('tmp.csv')
@@ -59,6 +81,29 @@ def mark_all_down(all_quotes):
     print("mark data",all_marks)
     pd.DataFrame.to_csv(all_marks,'allmarks.csv')
     print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+
+def group_mean(df,column='Volume',n=6):
+    return df[column].rolling(n).mean()
+
+def find_special(df):
+    if df==None:
+       df=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
+    ab=df[(df.p_change>0.7) | (df.p_change< -0.7)][[u'Symbol', u'p_change', u'Industry_Name']]
+    ab['reason']='+_0.7'
+    vh=df[df.Volume > (df.v6 * 2)]  
+    print("what's special today:\n")
+    print(ab)
+
+def append_average(df, col='Volume',win=6):
+    cols=['Symbol',col]
+    sle=df[cols]
+    v6=sle.groupby('Symbol').apply(group_mean(sle[col],column=col,n=win))
+    v6=v6.reset_index()
+    v6=v6.set_index('level_1')
+    v6.drop('Symbol',axis=1,inplace=True)
+    res=pd.concat([df,v6],axis=1)
+    res.drop(['Unnamed: 0.1','Unnamed: 0.1.1'],axis=1,inplace=True)
+    return res
 
 def ma_cal(df):
     prc=df.Close
@@ -151,9 +196,10 @@ def run():
     data=pd.DataFrame([],columns=DATA_HEAD_ALL)
     if args.methods == 'basic':
         print('*****basic data processing *********')
-        data=initDataSet(INPUT_DATA_FILE)
-        basics_cal(data)
-        mark_all_down(data)
+        #data=initDataSet(INPUT_DATA_FILE)
+        #basics_cal(data)
+        #mark_all_down(data)
+        group_process()
     elif args.methods == 'away51':
         data=initDataSet(OUTPUT_DATA_FILE)
         data=data.drop('Unnamed: 0',axis=1)
@@ -163,10 +209,6 @@ def run():
         print(out)
     elif args.methods=='rank':
         rank_industry(args.symbol,args.industry)
-    #basics_cal(data)
-    #mark_all_down(data)
-    #data.to_csv(OUTPUT_DATA_FILE)
-    data=pd.read_csv(OUTPUT_DATA_FILE)
 
 def initDataSet(file):
     return pd.read_csv(file)

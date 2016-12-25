@@ -34,6 +34,7 @@ def group_cal(df):
     mark_single_quote(df)
     df['ma51']=df['Close'].rolling(51).mean()
     df['v6']=df['Volume'].rolling(6).mean()
+    df['p_chg_aggr']=df['p_change'].rolling(3).sum()
     df.fillna(method='ffill',inplace=True)
     return df
 
@@ -85,14 +86,22 @@ def mark_all_down(all_quotes):
 def group_mean(df,column='Volume',n=6):
     return df[column].rolling(n).mean()
 
-def find_special(df):
-    if df==None:
+def find_special(day,df=None):
+    if df is None:
        df=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
-    ab=df[(df.p_change>0.7) | (df.p_change< -0.7)][[u'Symbol', u'p_change', u'Industry_Name']]
+    df.reset_index(inplace=True)
+    col=[u'Symbol', u'Industry_Name',u'Date']
+    ab=df[(df.p_change>0.7) | (df.p_change< -0.7)][col]
     ab['reason']='+_0.7'
-    vh=df[df.Volume > (df.v6 * 2)]  
+    vh=df[df.Volume > (df.v6 * 2)][col]  
+    vh['reason']='volume doubles'
+    ah=df[(df.p_chg_aggr> 0.1) | (df.p_chg_aggr < -0.1)][col]
+    ah['reason']='aggregate change more than +-10%'
+    res=pd.concat((ab,vh,ah),ignore_index=True)
+    #res.set_index('Date',inplace=True)
+    res.to_csv('special.csv')
     print("what's special today:\n")
-    print(ab)
+    print(res[res.Date == day])
 
 def append_average(df, col='Volume',win=6):
     cols=['Symbol',col]
@@ -209,6 +218,8 @@ def run():
         print(out)
     elif args.methods=='rank':
         rank_industry(args.symbol,args.industry)
+    elif args.methods == 'special':
+        find_special(args.end_date)
 
 def initDataSet(file):
     return pd.read_csv(file)

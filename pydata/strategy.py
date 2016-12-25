@@ -141,6 +141,7 @@ def rank_industry(symbol,industry=None):
     symbol:string, the symbol of the code
     """
     data2=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
+    data2.reset_index(inplace=True)
     gb=data2[['Symbol','Name','Industry_Name','mark']].groupby(['Symbol','Name','Industry_Name']).sum()
     gb=gb.reset_index()
     ind=industry
@@ -215,6 +216,7 @@ def run():
         data=data.drop('Unnamed: 0.1',axis=1)
         data.Date=pd.to_datetime(data.Date)
         out=away51Top(data,args.end_date)
+        out.to_csv('away51.csv')
         print(out)
     elif args.methods=='rank':
         rank_industry(args.symbol,args.industry)

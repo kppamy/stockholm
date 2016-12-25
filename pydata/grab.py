@@ -2,6 +2,7 @@
 # coding=utf-8
 import requests
 import json
+import option
 from datetime import datetime
 from datetime import timedelta
 import timeit
@@ -298,28 +299,10 @@ class Grab(object):
         if('csv' in export_type_array):
             print("start export to CSV file...\n")
             columns = []
-            #if(all_quotes is not None and len(all_quotes) > 0):
-#                columns = self.get_columns(all_quotes[0])
-            #writer = csv.writer(open(directory + '/' + file_name + '.csv', 'w', encoding=self.charset))
-            #writer.writerow(columns)
             self.all_quotes_data=[]
             for quote in all_quotes:
                 if('Data' in quote):
                     self.all_quotes_data=self.all_quotes_data+quote['Data']
-
-                    #for quote_data in quote['Data']:
-                    #    try:
-                    #        line = []
-                    #        for column in columns:
-                    #            if(column.find('data.') > -1):
-                    #                if(column[5:] in quote_data):
-                    #                    line.append(quote_data[column[5:]])
-                    #            else:
-                    #                line.append(quote[column])
-                    #        writer.writerow(line)
-                    #    except Exception as e:
-                    #        print(e)
-                    #        print("write csv error: " + quote)
         print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def get_columns(self, quote):
@@ -360,8 +343,12 @@ class Grab(object):
         all_quotes=df.to_dict('records')
         some_quotes = all_quotes
         self.load_all_quote_data(some_quotes, start_date, end_date)
-        fails=pd.dataframe(self.all_quotes_fail,columns=['symbol'])
-        fails.to_csv('fail2.csv')
+        self.data_export(some_quotes, output_types, None)
+        df=self.convert2DataFrame(self.all_quotes_data)
+        fails=pd.DataFrame(self.all_quotes_fail,columns=['symbol','name'])
+        if len(fails) > 0 :
+            fails.to_csv('fail2.csv')
+        return df
 
 
     def convert_allinone_dtyp(self):
@@ -420,14 +407,14 @@ class Grab(object):
         res=pd.DataFrame([],columns=DATA_HEAD)
         if self.update == 'Y':
             res=self.data_load(self.start_date, self.end_date, output_types)
-        if self.updateone == 'all':
+        elif self.updateone == 'all':
             res=self.get_whole_quote_hist(self.symbol)
         elif self.updateone == 'range' :
             res=self.get_quote_hist(self.symbol)
             print(res)
+        if self.reload_data == 'Y':
+            f=self.try_elim_fail(self.start_date, self.end_date, output_types)
+            q=pd.DataFrame.from_csv('crawl.csv')
+            res=pd.concat((q,f),ignore_index=True)
+            res.drop_duplicates(inplace=True)
         res.to_csv('crawl.csv')
-        ## loading stock data
-        #if(self.reload_data == 'Y'):
-        #    self.data_load(self.start_date, self.end_date, output_types)
-        #self.try_elim_fail(self.start_date, self.end_date, output_types)
-

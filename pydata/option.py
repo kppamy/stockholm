@@ -8,7 +8,7 @@ def get_date_str(offset):
     return date_str
 
 _default = dict(
-    reload_data = 'Y',
+    reload_data = 'N',
     gen_portfolio = 'N',
     output_type = 'csv',
     charset = 'utf-8',

@@ -62,7 +62,7 @@ class Grab(object):
         main(args)
         self.updateone=args.updateone
         self.symbol=args.symbol
-        
+
     def load_all_quote_symbol(self):
         print("load_all_quote_symbol start..." + "\n")
         start = timeit.default_timer()
@@ -143,7 +143,7 @@ class Grab(object):
 
     def load_all_quote_info(self, all_quotes):
         print("load_all_quote_info start...")
-        
+
         start = timeit.default_timer()
         for idx, quote in enumerate(all_quotes):
             print("#" + str(idx + 1))
@@ -177,12 +177,12 @@ class Grab(object):
             data=data+quote_data
             now=now-timedelta(365)
         return self.convert2DataFrame(data)
-    
+
     def get_quote_hist(self,symbol):
         '''
         symbol: string, 600000.SS
         '''
-        now=datetime.now()
+        now=datetime.strptime(self.end_date,DATEFORMAT)
         data=[]
         pivot=datetime.strptime(self.start_date,DATEFORMAT)
         stop=False
@@ -223,7 +223,7 @@ class Grab(object):
         df=pd.DataFrame.from_dict(data)
         #df=df.drop_duplicates()
         df=df[DATA_HEAD]
-        #df=df.sort(columns='Date',ascending=False) 
+        #df=df.sort(columns='Date',ascending=False)
         return df
 
     def get_oneyear_quote(self,symbol,start_date,end_date):
@@ -242,25 +242,19 @@ class Grab(object):
         return quote['Data']
 
     def load_quote_data(self, quote, start_date, end_date, is_retry, counter):
-        ## print("load_quote_data start..." + "\n")
         start = timeit.default_timer()
-        if(quote is not None and quote['Symbol'] is not None):        
+        if(quote is not None and 'Symbol' in quote ):
             yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + quote['Symbol'].upper() + '" and startDate = "' + start_date + '" and endDate = "' + end_date + '"'
             r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
             try:
                 r = requests.get(self.yql_url, params=r_params)
-                #print(r.url)
-                ## print(r.text)
                 rjson = r.json()
-                #print("quote data rjson\n",rjson)
                 quote_data = rjson['query']['results']['quote']
                 quote_data.reverse()
                 quote['Data'] = quote_data
-                #print("one quote data from yahoo:\n",quote_data)
                 self.data_save_one(quote)
-                #self.all_quotes_data=self.all_quotes_data+quote_data
                 if(not is_retry):
-                    counter.append(1)          
+                    counter.append(1)
             except:
                 print("Error: Failed to load stock data... " + quote['Symbol'] + "/" + quote['Name'] + "\n")
                 self.all_quotes_fail.append([quote['Symbol'],quote['Name']])
@@ -276,7 +270,7 @@ class Grab(object):
         mapfunc = partial(self.load_quote_data, start_date=start_date, end_date=end_date, is_retry=True, counter=counter)
         pool = ThreadPool(self.thread)
         pool.map(mapfunc, all_quotes) ## multi-threads executing
-        pool.close() 
+        pool.close()
         pool.join()
         print("load_all_quote_data end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
         l=len(all_quotes)
@@ -337,7 +331,7 @@ class Grab(object):
         fails=pd.DataFrame(self.all_quotes_fail,columns=['symbol','name'])
         fails.to_csv('fail.csv')
         return df
-        
+
     def try_elim_fail(self,start_date,end_date,output_types):
         df=pd.read_csv('fail.csv')
         all_quotes=df.to_dict('records')
@@ -409,9 +403,13 @@ class Grab(object):
             res=self.data_load(self.start_date, self.end_date, output_types)
         elif self.updateone == 'all':
             res=self.get_whole_quote_hist(self.symbol)
+            res.to_csv(self.symbol[:6]+'.csv')
+            return
         elif self.updateone == 'range' :
             res=self.get_quote_hist(self.symbol)
             print(res)
+            res.to_csv(self.symbol[:6]+'.csv')
+            return
         if self.reload_data == 'Y':
             f=self.try_elim_fail(self.start_date, self.end_date, output_types)
             q=pd.DataFrame.from_csv('crawl.csv')

@@ -346,12 +346,10 @@ class Grab(object):
 
 
     def convert_allinone_dtyp(self):
-        #print("all in one: dtypes before**********************************\n",self.allinone.dtypes)
-        self.allinone['code']=self.allinone['code'].astype('int')
+        self.allinone['code']=self.allinone['code'].astype('str')
         self.allinone['name']=self.allinone['name'].astype('str')
         self.allinone['ticktime']=pd.to_datetime(self.allinone['ticktime'])
         self.allinone[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']]=self.allinone[['trade','pricechange','changepercent','buy','sell','settlement','open','high','low','volume','amount','nta']].astype('float')
-        #print("all in one after ajust the dtypes:\n",self.allinone.dtypes)
 
     def convert_onestock_dtype(self,quote):
        #print("single stock dtype before adjusting:\n",quote.dtypes)

@@ -212,8 +212,10 @@ def run():
         group_process()
     elif args.methods == 'away51':
         data=initDataSet(OUTPUT_DATA_FILE)
-        data=data.drop('Unnamed: 0',axis=1)
-        data=data.drop('Unnamed: 0.1',axis=1)
+        if 'Unnamed: 0' in data:
+            data=data.drop('Unnamed: 0',axis=1)
+        if 'Unnamed: 0.1' in data:
+            data=data.drop('Unnamed: 0.1',axis=1)
         data.Date=pd.to_datetime(data.Date)
         out=away51Top(data,args.end_date)
         out.to_csv('away51.csv')

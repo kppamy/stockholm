@@ -40,11 +40,10 @@ def group_cal(df):
 
 def group_process():
     start=timeit.default_timer()
-    d1=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
+    d1=initDataSet(OUTPUT_DATA_FILE)
     d1.reset_index(inplace=True)
-    q=pd.DataFrame.from_csv('crawl.csv')
+    q=pd.read_csv('crawl.csv')
     data=pd.concat((d1,q),ignore_index=True)
-    data.Date=pd.to_datetime(data.Date)
     tmp=data.groupby('Symbol').apply(group_cal)
     tmp.to_csv('group.csv')
     end=timeit.default_timer()
@@ -135,6 +134,32 @@ def top_industry(data,n=3):
         res=res.append(tmp.reset_index())
     return res
 
+def get_industry_data(type='industry'):
+    df=initDataSet(OUTPUT_DATA_FILE)
+    df.reset_index(inplace=True)
+    df['code']=df.Symbol.apply(lambda x: x[:6])
+    df.set_index('code',inplace=True)
+    dh=df.Symbol
+    dic=dh.to_dict()
+    df.reset_index(inplace=True)
+    cpt=pd.read_csv('industry_detail.csv',dtype='str')
+    if type == 'concept':
+        cpt=pd.read_csv('concept_detail.csv',dtype='str')
+    cpt['Symbol']=cpt.code.apply(lambda x:symbolConvert(x,dic))
+    cpt.drop(['code'],inplace=True,axis=1)
+    cpt.drop(['Unnamed: 0'],inplace=True,axis=1)
+    df.drop('code',axis=1,inplace=True)
+    data=pd.merge(df,cpt,on='Symbol')
+    data.drop('Industry_Name',axis=1,inplace=True)
+    data['Industry_Name']=data.c_name
+    data.to_csv(OUTPUT_DATA_FILE)
+
+def symbolConvert(x,dic):
+    if x in dic:
+        return dic[x]
+    else:
+        return x
+
 def rank_industry(symbol,industry=None):
     """
     get an industry mark rank through a stock
@@ -145,7 +170,7 @@ def rank_industry(symbol,industry=None):
     gb=data2[['Symbol','Name','Industry_Name','mark']].groupby(['Symbol','Name','Industry_Name']).sum()
     gb=gb.reset_index()
     ind=industry
-    if industry == None:
+    if industry == None or industry == '':
         ind=gb[gb.Symbol==symbol]['Industry_Name']
         res=gb[gb.Industry_Name == ind.values[0]]
     else:
@@ -202,7 +227,6 @@ def away51(m51,date):
 
 def run():
     args=option.parser.parse_args()
-
     data=pd.DataFrame([],columns=DATA_HEAD_ALL)
     if args.methods == 'basic':
         print('*****basic data processing *********')
@@ -212,11 +236,6 @@ def run():
         group_process()
     elif args.methods == 'away51':
         data=initDataSet(OUTPUT_DATA_FILE)
-        if 'Unnamed: 0' in data:
-            data=data.drop('Unnamed: 0',axis=1)
-        if 'Unnamed: 0.1' in data:
-            data=data.drop('Unnamed: 0.1',axis=1)
-        data.Date=pd.to_datetime(data.Date)
         out=away51Top(data,args.end_date)
         out.to_csv('away51.csv')
         print(out)
@@ -224,9 +243,21 @@ def run():
         rank_industry(args.symbol,args.industry)
     elif args.methods == 'special':
         find_special(args.end_date)
+    elif args.methods == 'foundation':
+        get_industry_data()
 
 def initDataSet(file):
-    return pd.read_csv(file)
+    data=pd.read_csv(file)
+    if 'Unnamed: 0' in data:
+        data=data.drop('Unnamed: 0',axis=1)
+    if 'Unnamed: 0.1' in data:
+        data=data.drop('Unnamed: 0.1',axis=1)
+    if 'Symbol.1' in data:
+        data.drop('Symbol.1',axis=1,inplace=True)
+    if 'index' in data:
+        data.drop('index',axis=1,inplace=True)
+    data.Date=pd.to_datetime(data.Date)
+    return data
 
 if __name__ == '__main__':
     run()

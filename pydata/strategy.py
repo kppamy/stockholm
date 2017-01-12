@@ -150,8 +150,10 @@ def get_industry_data(type='industry'):
     cpt.drop(['Unnamed: 0'],inplace=True,axis=1)
     df.drop('code',axis=1,inplace=True)
     data=pd.merge(df,cpt,on='Symbol')
-    data.drop('Industry_Name',axis=1,inplace=True)
+    if 'Industry_Name' in data:
+        data.drop('Industry_Name',axis=1,inplace=True)
     data['Industry_Name']=data.c_name
+    data.drop('c_name',axis=1,inplace=True)
     data.to_csv(OUTPUT_DATA_FILE)
 
 def symbolConvert(x,dic):

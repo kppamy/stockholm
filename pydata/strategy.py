@@ -43,6 +43,7 @@ def group_process():
     d1=initDataSet(OUTPUT_DATA_FILE)
     d1.reset_index(inplace=True)
     q=pd.read_csv('crawl.csv')
+    q.drop_duplicates(inplace=True)
     data=pd.concat((d1,q),ignore_index=True)
     tmp=data.groupby('Symbol').apply(group_cal)
     tmp.to_csv('group.csv')
@@ -89,18 +90,29 @@ def find_special(day,df=None):
     if df is None:
        df=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
     df.reset_index(inplace=True)
-    col=[u'Symbol', u'Industry_Name',u'Date']
+    df.drop_duplicates(inplace=True)
+    col=[u'Symbol', u'Name',u'Industry_Name',u'Date']
     ab=df[(df.p_change>0.7) | (df.p_change< -0.7)][col]
     ab['reason']='+_0.7'
     vh=df[df.Volume > (df.v6 * 2)][col]  
     vh['reason']='volume doubles'
-    ah=df[(df.p_chg_aggr> 0.1) | (df.p_chg_aggr < -0.1)][col]
-    ah['reason']='aggregate change more than +-10%'
-    res=pd.concat((ab,vh,ah),ignore_index=True)
+    ah=df[(df.p_chg_aggr> 0.1)][col]
+    ah['reason']='aggregate change more than +10%'
+    ah2=df[(df.p_chg_aggr < -0.1)][col]
+    ah2['reason']='aggregate change more than -10%'
+    res=pd.concat((ab,vh,ah,ah2),ignore_index=True)
     #res.set_index('Date',inplace=True)
     res.to_csv('special.csv')
     print("what's special today:\n")
-    print(res[res.Date == day])
+    today=res[res.Date == day]
+    top=pd.read_csv('top.csv')
+    if 'Unnamed: 0' in today:
+        today.drop('Unnamed: 0',axis=1,inplace=True)
+    top.drop('Unnamed: 0',axis=1,inplace=True)
+    today.drop_duplicates(inplace=True)
+    top.drop_duplicates(inplace=True)
+    spe=pd.merge(today,top,on=['Symbol'])
+    print(spe)
 
 def append_average(df, col='Volume',win=6):
     cols=['Symbol',col]
@@ -132,6 +144,7 @@ def top_industry(data,n=3):
         print(x)
         print("\n########################top "+ str(n)+ " of ",(x)," :\n",tmp)
         res=res.append(tmp.reset_index())
+    res.to_csv('top.csv')
     return res
 
 def get_industry_data(type='industry'):
@@ -175,12 +188,13 @@ def rank_industry(symbol,industry=None):
     if industry == None or industry == '':
         ind=gb[gb.Symbol==symbol]['Industry_Name']
         res=gb[gb.Industry_Name == ind.values[0]]
+        industry=ind.values[0]
     else:
         res=gb[gb.Industry_Name == industry]
     res=res.sort_values(by='mark',ascending=False)
     res.reindex()
     res['ranks']=res['mark'].rank(method='first')
-    res.to_csv('rank'+ind+'.csv')
+    res.to_csv('rank'+industry+'.csv')
     print(res)
 
 def basics_cal(all_quotes):

@@ -108,7 +108,8 @@ def find_special(day,df=None):
     top=pd.read_csv('top.csv')
     if 'Unnamed: 0' in today:
         today.drop('Unnamed: 0',axis=1,inplace=True)
-    top.drop('Unnamed: 0',axis=1,inplace=True)
+    if 'Unnamed: 0' in top:
+        top.drop('Unnamed: 0',axis=1,inplace=True)
     today.drop_duplicates(inplace=True)
     top.drop_duplicates(inplace=True)
     spe=pd.merge(today,top,on=['Symbol'])
@@ -122,7 +123,8 @@ def append_average(df, col='Volume',win=6):
     v6=v6.set_index('level_1')
     v6.drop('Symbol',axis=1,inplace=True)
     res=pd.concat([df,v6],axis=1)
-    res.drop(['Unnamed: 0.1','Unnamed: 0.1.1'],axis=1,inplace=True)
+    if 'Unnamed: 0' in res:
+        res.drop(['Unnamed: 0.1','Unnamed: 0.1.1'],axis=1,inplace=True)
     return res
 
 def ma_cal(df):
@@ -231,6 +233,7 @@ def basics_cal(all_quotes):
 def away51Top(data,bench,n=3):
     tops=top_industry(data,n)
     r51=away51(data,bench)
+    r51.to_csv('away51.csv')
     res=r51.merge(tops,on='Symbol')
     res=res[['Date','Symbol','Name','Industry_Name','ma51','mark_y']]
     #print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
@@ -253,7 +256,7 @@ def run():
     elif args.methods == 'away51':
         data=initDataSet(OUTPUT_DATA_FILE)
         out=away51Top(data,args.end_date)
-        out.to_csv('away51.csv')
+        out.to_csv('away51top.csv')
         print(out)
     elif args.methods=='rank':
         rank_industry(args.symbol,args.industry)
@@ -272,7 +275,10 @@ def initDataSet(file):
         data.drop('Symbol.1',axis=1,inplace=True)
     if 'index' in data:
         data.drop('index',axis=1,inplace=True)
+    data['Date']=data.Date.astype('str')
+    data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00',''))
     data.Date=pd.to_datetime(data.Date)
+    data.drop_duplicates(inplace=True)
     return data
 
 if __name__ == '__main__':

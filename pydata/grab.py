@@ -245,9 +245,11 @@ class Grab(object):
         start = timeit.default_timer()
         if(quote is not None and 'Symbol' in quote ):
             yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + quote['Symbol'].upper() + '" and startDate = "' + start_date + '" and endDate = "' + end_date + '"'
-            r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            #r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            r_params = {'q': yquery, 'format': 'json', 'env': 'store://datatables.org/alltableswithkeys'}
             try:
                 r = requests.get(self.yql_url, params=r_params)
+                #print(r.url)
                 rjson = r.json()
                 quote_data = rjson['query']['results']['quote']
                 quote_data.reverse()

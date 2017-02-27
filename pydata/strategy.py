@@ -26,7 +26,7 @@ def mark_single_quote(quote):
     df.loc[(df.v_change<0) & (df.p_change>0),'mark']=1
     df.loc[(df.v_change<0) & (df.p_change<0),'mark']=-1
     df.loc[(df.v_change>0) & (df.p_change<0),'mark']=-2
-    
+   
 def group_cal(df):
     df.set_index('Date',inplace=True)
     df['v_change']=df['Volume'].pct_change()
@@ -34,21 +34,25 @@ def group_cal(df):
     mark_single_quote(df)
     df['ma51']=df['Close'].rolling(51).mean()
     df['v6']=df['Volume'].rolling(6).mean()
+    df['ma5']=df['Close'].rolling(5).mean()
+    df['ma20']=df['Close'].rolling(20).mean()
+    df['ma30']=df['Close'].rolling(30).mean()
     df['p_chg_aggr']=df['p_change'].rolling(3).sum()
+    df['max']=df.Close.max()
     df.fillna(method='ffill',inplace=True)
     return df
 
-def group_process():
+def group_process(data):
     start=timeit.default_timer()
-    d1=initDataSet(OUTPUT_DATA_FILE)
+    d1=data
     d1.reset_index(inplace=True)
     q=pd.read_csv('crawl.csv')
     q.drop_duplicates(inplace=True)
     data=pd.concat((d1,q),ignore_index=True)
     tmp=data.groupby('Symbol').apply(group_cal)
-    tmp.to_csv('group.csv')
     end=timeit.default_timer()
     print("basical group compute takes "+str(round(end-start))+"s ")
+    return data
 
 def get_allDB_data():
     data=pd.read_csv('tmp.csv')
@@ -92,15 +96,21 @@ def find_special(day,df=None):
     df.reset_index(inplace=True)
     df.drop_duplicates(inplace=True)
     col=[u'Symbol', u'Name',u'Industry_Name',u'Date']
-    ab=df[(df.p_change>0.7) | (df.p_change< -0.7)][col]
-    ab['reason']='+_0.7'
-    vh=df[df.Volume > (df.v6 * 2)][col]  
+    ab=df[(df.p_change>0.07) | (df.p_change< -0.07)][col]
+    ab['reason']='+_7%'
+    vh=df[df.Volume > (df.v6 * 3)][col]
     vh['reason']='volume doubles'
     ah=df[(df.p_chg_aggr> 0.1)][col]
     ah['reason']='aggregate change more than +10%'
     ah2=df[(df.p_chg_aggr < -0.1)][col]
     ah2['reason']='aggregate change more than -10%'
-    res=pd.concat((ab,vh,ah,ah2),ignore_index=True)
+    ah3=df[((df.max-df.Close)/df.max)< 0.1][col]
+    ah3['reason']='no more than 10% away from max'
+    long=is_long(day,df)
+    short=is_short(day,df)
+    #ah4=df[((df.max-df.Close)/df.max)< 0.1)][col]
+    #ah4['reason']='no more than 10% away from max'
+    res=pd.concat((ab,vh,ah,ah2,ah3,long,short),ignore_index=True)
     #res.set_index('Date',inplace=True)
     res.to_csv('special.csv')
     print("what's special today:\n")
@@ -114,6 +124,22 @@ def find_special(day,df=None):
     top.drop_duplicates(inplace=True)
     spe=pd.merge(today,top,on=['Symbol'])
     print(spe)
+
+def is_long(day,data):
+    df=data[data['Date']==day]
+    lg=df[(df.Close>df.ma5)&(df.ma5>df.ma20)&(df.ma20>df.ma30)&(df.ma30>df.ma51)]
+    if len(lg) > 0:
+        lg['reason']='long array'
+        return lg
+    return None
+
+def is_short(day,data):
+    df=data[data['Date']==day]
+    lg=df[(df.Close<df.ma5)&(df.ma5<df.ma20)&(df.ma20<df.ma30)&(df.ma30<df.ma51)]
+    if len(lg) > 0:
+        lg['reason']='short array'
+        return lg
+    return None
 
 def append_average(df, col='Volume',win=6):
     cols=['Symbol',col]
@@ -149,14 +175,8 @@ def top_industry(data,n=3):
     res.to_csv('top.csv')
     return res
 
-def get_industry_data(type='industry'):
-    df=initDataSet(OUTPUT_DATA_FILE)
-    df.reset_index(inplace=True)
-    df['code']=df.Symbol.apply(lambda x: x[:6])
-    df.set_index('code',inplace=True)
-    dh=df.Symbol
-    dic=dh.to_dict()
-    df.reset_index(inplace=True)
+def get_industry_data(df,type='industry'):
+    dic=getSymbolDict(df)
     cpt=pd.read_csv('industry_detail.csv',dtype='str')
     if type == 'concept':
         cpt=pd.read_csv('concept_detail.csv',dtype='str')
@@ -171,20 +191,29 @@ def get_industry_data(type='industry'):
     data.drop('c_name',axis=1,inplace=True)
     data.to_csv(OUTPUT_DATA_FILE)
 
+def getSymbolDict(df):
+    df.reset_index(inplace=True)
+    df['code']=df.Symbol.apply(lambda x: x[:6])
+    df.set_index('code',inplace=True)
+    dh=df.Symbol
+    dic=dh.to_dict()
+    df.reset_index(inplace=True)
+    return dic
+
 def symbolConvert(x,dic):
     if x in dic:
         return dic[x]
     else:
         return x
 
-def rank_industry(symbol,industry=None):
+def rank_industry(data,symbol,industry=None):
     """
     get an industry mark rank through a stock
     symbol:string, the symbol of the code
     """
-    data2=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
-    data2.reset_index(inplace=True)
-    gb=data2[['Symbol','Name','Industry_Name','mark']].groupby(['Symbol','Name','Industry_Name']).sum()
+    data=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
+    data.reset_index(inplace=True)
+    gb=data[['Symbol','Name','Industry_Name','mark']].groupby(['Symbol','Name','Industry_Name']).sum()
     gb=gb.reset_index()
     ind=industry
     if industry == None or industry == '':
@@ -247,23 +276,29 @@ def away51(m51,date):
 def run():
     args=option.parser.parse_args()
     data=pd.DataFrame([],columns=DATA_HEAD_ALL)
+    data=initDataSet(OUTPUT_DATA_FILE)
     if args.methods == 'basic':
         print('*****basic data processing *********')
-        #data=initDataSet(INPUT_DATA_FILE)
         #basics_cal(data)
         #mark_all_down(data)
-        group_process()
+        group_process(data)
     elif args.methods == 'away51':
-        data=initDataSet(OUTPUT_DATA_FILE)
         out=away51Top(data,args.end_date)
         out.to_csv('away51top.csv')
         print(out)
     elif args.methods=='rank':
-        rank_industry(args.symbol,args.industry)
+        rank_industry(data,args.symbol,args.industry)
     elif args.methods == 'special':
-        find_special(args.end_date)
+        find_special(args.end_date,data)
     elif args.methods == 'foundation':
-        get_industry_data()
+        get_industry_data(data)
+    elif args.methods == 'report':
+        #data=group_process(data)
+        out=away51Top(data,args.end_date)
+        out.to_csv('away51top.csv')
+        print(out)
+        find_special(args.end_date,data)
+    data.to_csv(OUTPUT_DATA_FILE)
 
 def initDataSet(file):
     data=pd.read_csv(file)
@@ -279,6 +314,7 @@ def initDataSet(file):
     data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00',''))
     data.Date=pd.to_datetime(data.Date)
     data.drop_duplicates(inplace=True)
+    data.to_csv(file)
     return data
 
 if __name__ == '__main__':

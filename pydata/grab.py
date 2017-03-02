@@ -196,7 +196,8 @@ class Grab(object):
                 stop=True
             #quote_data=self.get_oneyear_quote(symbol,start_date,end_date)
             yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol.upper() + '" and startDate = "' + start_date + '" and endDate = "' + end_date + '"'
-            r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            #r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
+            r_params = {'q': yquery, 'format': 'json', 'env': 'store://datatables.org/alltableswithkeys'}
             quote_data=[]
             try:
                 r = requests.get(self.yql_url, params=r_params)

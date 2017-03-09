@@ -26,9 +26,8 @@ def mark_single_quote(quote):
     df.loc[(df.v_change<0) & (df.p_change>0),'mark']=1
     df.loc[(df.v_change<0) & (df.p_change<0),'mark']=-1
     df.loc[(df.v_change>0) & (df.p_change<0),'mark']=-2
-   
+
 def group_cal(df):
-    df.set_index('Date',inplace=True)
     df['v_change']=df['Volume'].pct_change()
     df['p_change']=df['Close'].pct_change()
     mark_single_quote(df)
@@ -44,15 +43,15 @@ def group_cal(df):
 
 def group_process(data):
     start=timeit.default_timer()
+    data.Date=pd.to_datetime(data.Date)
     d1=data
-    d1.reset_index(inplace=True)
     q=pd.read_csv('crawl.csv')
     q.drop_duplicates(inplace=True)
     data=pd.concat((d1,q),ignore_index=True)
     tmp=data.groupby('Symbol').apply(group_cal)
     end=timeit.default_timer()
     print("basical group compute takes "+str(round(end-start))+"s ")
-    return data
+    return tmp
 
 def get_allDB_data():
     data=pd.read_csv('tmp.csv')
@@ -104,11 +103,11 @@ def find_special(day,df=None):
     ah['reason']='aggregate change more than +10%'
     ah2=df[(df.p_chg_aggr < -0.1)][col]
     ah2['reason']='aggregate change more than -10%'
-    ah3=df[((df.max-df.Close)/df.max)< 0.1][col]
+    ah3=df[((df['max']-df.Close)/df['max'])< 0.1][col]
     ah3['reason']='no more than 10% away from max'
     long=is_long(day,df)
     short=is_short(day,df)
-    #ah4=df[((df.max-df.Close)/df.max)< 0.1)][col]
+    #ah4=df[((df['max']-df.Close)/df['max'])< 0.1)][col]
     #ah4['reason']='no more than 10% away from max'
     res=pd.concat((ab,vh,ah,ah2,ah3,long,short),ignore_index=True)
     #res.set_index('Date',inplace=True)
@@ -194,7 +193,7 @@ def get_industry_data(df,type='industry'):
 def getSymbolDict(df):
     df.reset_index(inplace=True)
     df['code']=df.Symbol.apply(lambda x: x[:6])
-    df.set_index('code',inplace=True)
+    df=df.set_index('code')
     dh=df.Symbol
     dic=dh.to_dict()
     df.reset_index(inplace=True)
@@ -281,7 +280,7 @@ def run():
         print('*****basic data processing *********')
         #basics_cal(data)
         #mark_all_down(data)
-        group_process(data)
+        data=group_process(data)
     elif args.methods == 'away51':
         out=away51Top(data,args.end_date)
         out.to_csv('away51top.csv')
@@ -291,9 +290,9 @@ def run():
     elif args.methods == 'special':
         find_special(args.end_date,data)
     elif args.methods == 'foundation':
-        get_industry_data(data)
+        data=get_industry_data(data)
     elif args.methods == 'report':
-        #data=group_process(data)
+        data=group_process(data)
         out=away51Top(data,args.end_date)
         out.to_csv('away51top.csv')
         print(out)

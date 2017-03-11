@@ -11,12 +11,13 @@ from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 from liteDB import *
 import pandas as pd
+from pandas import DataFrame
 import numpy as np
 
 DATEFORMAT='%Y-%m-%d'
 DATA_HEAD=['Date','Open','High','Low','Close','Volume','Adj_Close','Symbol']
-DATA_HEAD_ALL=[['Industry_Code', 'Industry_Name', 'Code', 'Name', 'Area','Concept_Code', 'Concept_Name']]
-INPUT_DATA_FILE='query.csv'
+DATA_HEAD_ALL=[['Industry_Code', 'Industry', 'Code', 'Name', 'Area','Concept_Code', 'Concept_Name']]
+INPUT_DATA_FILE='basic.csv'
 OUTPUT_DATA_FILE='data.csv'
 
 def mark_single_quote(quote):
@@ -26,11 +27,11 @@ def mark_single_quote(quote):
     df.loc[(df.v_change<0) & (df.p_change>0),'mark']=1
     df.loc[(df.v_change<0) & (df.p_change<0),'mark']=-1
     df.loc[(df.v_change>0) & (df.p_change<0),'mark']=-2
+    return df
 
 def group_cal(df):
     df['v_change']=df['Volume'].pct_change()
     df['p_change']=df['Close'].pct_change()
-    mark_single_quote(df)
     df['ma51']=df['Close'].rolling(51).mean()
     df['v6']=df['Volume'].rolling(6).mean()
     df['ma5']=df['Close'].rolling(5).mean()
@@ -43,15 +44,21 @@ def group_cal(df):
 
 def group_process(data):
     start=timeit.default_timer()
-    data.Date=pd.to_datetime(data.Date)
     d1=data
-    q=pd.read_csv('crawl.csv')
-    q.drop_duplicates(inplace=True)
+    q=readCsv('crawl.csv')
     data=pd.concat((d1,q),ignore_index=True)
-    tmp=data.groupby('Symbol').apply(group_cal)
+    tmp=data['Symbol','Volume','Close'].groupby('Symbol').apply(group_cal)
+    tmp=mark_single_quote(tmp)
+    res=pd.concat(())
     end=timeit.default_timer()
     print("basical group compute takes "+str(round(end-start))+"s ")
     return tmp
+
+def readCsv(file):
+    q=pd.read_csv('file')
+    q=q.drop('Unnamed: 0',axis=1)
+    q.drop_duplicates(inplace=True)
+    return q
 
 def get_allDB_data():
     data=pd.read_csv('tmp.csv')
@@ -94,7 +101,7 @@ def find_special(day,df=None):
        df=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
     df.reset_index(inplace=True)
     df.drop_duplicates(inplace=True)
-    col=[u'Symbol', u'Name',u'Industry_Name',u'Date']
+    col=[u'Symbol', u'Name',u'Industry',u'Date']
     ab=df[(df.p_change>0.07) | (df.p_change< -0.07)][col]
     ab['reason']='+_7%'
     vh=df[df.Volume > (df.v6 * 3)][col]
@@ -111,17 +118,12 @@ def find_special(day,df=None):
     #ah4['reason']='no more than 10% away from max'
     res=pd.concat((ab,vh,ah,ah2,ah3,long,short),ignore_index=True)
     #res.set_index('Date',inplace=True)
-    res.to_csv('special.csv')
-    print("what's special today:\n")
     today=res[res.Date == day]
-    top=pd.read_csv('top.csv')
-    if 'Unnamed: 0' in today:
-        today.drop('Unnamed: 0',axis=1,inplace=True)
-    if 'Unnamed: 0' in top:
-        top.drop('Unnamed: 0',axis=1,inplace=True)
-    today.drop_duplicates(inplace=True)
-    top.drop_duplicates(inplace=True)
-    spe=pd.merge(today,top,on=['Symbol'])
+    print("what's special today:\n",today)
+
+def specialTop(special):
+    top=readCsv('top.csv')
+    spe=pd.merge(special,top,on=['Symbol'])
     print(spe)
 
 def is_long(day,data):
@@ -160,9 +162,9 @@ def ma_cal(df):
     df['ma51']=prc.rolling(51).mean()
 
 def top_industry(data,n=3):
-    industrys=data.Industry_Name.drop_duplicates()
+    industrys=data.Industry.drop_duplicates()
     industrys=industrys.dropna()
-    marks=data.groupby(['Symbol','Industry_Name'])['mark'].sum()
+    marks=data.groupby(['Symbol','Industry'])['mark'].sum()
     res=pd.DataFrame(columns=['Symbol','mark'])
     for x in industrys:
         mark_ind=marks[:,x]
@@ -171,24 +173,25 @@ def top_industry(data,n=3):
         print(x)
         print("\n########################top "+ str(n)+ " of ",(x)," :\n",tmp)
         res=res.append(tmp.reset_index())
-    res.to_csv('top.csv')
+    #res.to_csv('top.csv')
     return res
 
-def get_industry_data(df,type='industry'):
-    dic=getSymbolDict(df)
-    cpt=pd.read_csv('industry_detail.csv',dtype='str')
+def get_industry_data(df,type='ind'):
+    cpt=DataFrame()
     if type == 'concept':
         cpt=pd.read_csv('concept_detail.csv',dtype='str')
+    elif type == 'ind':
+        cpt=pd.read_csv('industry_detail.csv',dtype='str')
+    cpt.drop(['Unnamed: 0'],inplace=True,axis=1)
+    dic=getSymbolDict(df)
     cpt['Symbol']=cpt.code.apply(lambda x:symbolConvert(x,dic))
     cpt.drop(['code'],inplace=True,axis=1)
-    cpt.drop(['Unnamed: 0'],inplace=True,axis=1)
     df.drop('code',axis=1,inplace=True)
     data=pd.merge(df,cpt,on='Symbol')
-    if 'Industry_Name' in data:
-        data.drop('Industry_Name',axis=1,inplace=True)
-    data['Industry_Name']=data.c_name
+    if 'Industry' in data:
+        data.drop('Industry',axis=1,inplace=True)
+    data['Industry']=data.c_name
     data.drop('c_name',axis=1,inplace=True)
-    data.to_csv(OUTPUT_DATA_FILE)
 
 def getSymbolDict(df):
     df.reset_index(inplace=True)
@@ -212,15 +215,15 @@ def rank_industry(data,symbol,industry=None):
     """
     data=pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
     data.reset_index(inplace=True)
-    gb=data[['Symbol','Name','Industry_Name','mark']].groupby(['Symbol','Name','Industry_Name']).sum()
+    gb=data[['Symbol','Name','Industry','mark']].groupby(['Symbol','Name','Industry']).sum()
     gb=gb.reset_index()
     ind=industry
     if industry == None or industry == '':
-        ind=gb[gb.Symbol==symbol]['Industry_Name']
-        res=gb[gb.Industry_Name == ind.values[0]]
+        ind=gb[gb.Symbol==symbol]['Industry']
+        res=gb[gb.Industry == ind.values[0]]
         industry=ind.values[0]
     else:
-        res=gb[gb.Industry_Name == industry]
+        res=gb[gb.Industry == industry]
     res=res.sort_values(by='mark',ascending=False)
     res.reindex()
     res['ranks']=res['mark'].rank(method='first')
@@ -263,9 +266,9 @@ def away51Top(data,bench,n=3):
     r51=away51(data,bench)
     r51.to_csv('away51.csv')
     res=r51.merge(tops,on='Symbol')
-    res=res[['Date','Symbol','Name','Industry_Name','ma51','mark_y']]
+    res=res[['Date','Symbol','Name','Industry','ma51','mark_y']]
     #print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
-    res=res.sort('Industry_Name')
+    res=res.sort('Industry')
     return res
 
 def away51(m51,date):
@@ -274,14 +277,30 @@ def away51(m51,date):
 
 def run():
     args=option.parser.parse_args()
-    data=pd.DataFrame([],columns=DATA_HEAD_ALL)
-    data=initDataSet(OUTPUT_DATA_FILE)
+    data=DataFrame()
     if args.methods == 'basic':
+        data=initDataSet(INPUT_DATA_FILE)
         print('*****basic data processing *********')
         #basics_cal(data)
         #mark_all_down(data)
         data=group_process(data)
-    elif args.methods == 'away51':
+        data.to_csv(INPUT_DATA_FILE)
+        return
+    elif args.methods == 'foundation':
+        data=initDataSet(INPUT_DATA_FILE)
+        data=get_industry_data(data)
+        data.to_csv(OUTPUT_DATA_FILE)
+        return
+    elif args.methods == 'report':
+        data=initDataSet(INPUT_DATA_FILE)
+        data=group_process(data)
+        out=away51Top(data,args.end_date)
+        print(out)
+        find_special(args.end_date,data)
+        data.to_csv(OUTPUT_DATA_FILE)
+        return
+    data=initDataSet(OUTPUT_DATA_FILE)
+    if args.methods == 'away51':
         out=away51Top(data,args.end_date)
         out.to_csv('away51top.csv')
         print(out)
@@ -289,18 +308,17 @@ def run():
         rank_industry(data,args.symbol,args.industry)
     elif args.methods == 'special':
         find_special(args.end_date,data)
-    elif args.methods == 'foundation':
-        data=get_industry_data(data)
-    elif args.methods == 'report':
-        data=group_process(data)
-        out=away51Top(data,args.end_date)
-        out.to_csv('away51top.csv')
-        print(out)
-        find_special(args.end_date,data)
     data.to_csv(OUTPUT_DATA_FILE)
 
 def initDataSet(file):
     data=pd.read_csv(file)
+    cleanData(data)
+    data.drop_duplicates(inplace=True)
+    data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00',''))
+    data.Date=pd.to_datetime(data.Date)
+    return data
+
+def cleanData(data):
     if 'Unnamed: 0' in data:
         data=data.drop('Unnamed: 0',axis=1)
     if 'Unnamed: 0.1' in data:
@@ -309,12 +327,6 @@ def initDataSet(file):
         data.drop('Symbol.1',axis=1,inplace=True)
     if 'index' in data:
         data.drop('index',axis=1,inplace=True)
-    data['Date']=data.Date.astype('str')
-    data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00',''))
-    data.Date=pd.to_datetime(data.Date)
-    data.drop_duplicates(inplace=True)
-    data.to_csv(file)
-    return data
 
 if __name__ == '__main__':
     run()

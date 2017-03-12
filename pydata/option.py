@@ -1,4 +1,4 @@
-import argparse 
+import argparse
 import datetime
 
 def get_date_str(offset):
@@ -25,10 +25,11 @@ _default = dict(
     queryDB='N',
     updateone='N',
     symbol='',
-    industry=''
+    industry='',
+    category='Industry'
     )
 
-parser = argparse.ArgumentParser(description='A crawler and portfolio testing framework.') 
+parser = argparse.ArgumentParser(description='A crawler and portfolio testing framework.')
 
 parser.add_argument('--reload', type=str, default=_default['reload_data'], dest='reload_data', help='Reload the stock data or not (Y/N), Default: %s' % _default['reload_data'])
 
@@ -63,6 +64,7 @@ parser.add_argument('--dbname', type=str, default=_default['db_name'], dest='db_
 
 parser.add_argument('--methods', type=str, default=_default['methods'], dest='methods', help='Target methods for back testing, Default: %s' % _default['methods'])
 parser.add_argument('--industry', type=str, default=_default['industry'], dest='industry', help='Target industry for analyzing, Default: %s' % _default['industry'])
+parser.add_argument('--category', type=str, default=_default['category'], dest='category', help='Rank category for analyzing: [Industry/Area/Concept] Default: %s' % _default['category'])
 
 def main():
     args = parser.parse_args()

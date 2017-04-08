@@ -18,7 +18,8 @@ import tushare as ts
 DATEFORMAT='%Y-%m-%d'
 DATA_HEAD=['Date','Open','High','Low','Close','Volume','Adj_Close','Symbol']
 DATA_HEAD_ALL=[['Industry_Code', 'Industry', 'Code', 'Name', 'Area','Concept_Code', 'Concept_Name']]
-INPUT_DATA_FILE='basic.csv'
+BASIC_DATA_FILE='basic.csv'
+FINANCE_FILE='finance.csv'
 OUTPUT_DATA_FILE='data.csv'
 
 def mark_single_quote(quote):
@@ -46,10 +47,11 @@ def group_cal(df):
 def group_process(data):
     start=timeit.default_timer()
     d1=data
-    q=readCsv('crawl.csv')
+    #q=readCsv('crawl.csv')
+    q=initDataSet('crawl.csv')
     data=pd.concat((d1,q),ignore_index=True)
     data=data.drop_duplicates()
-    data.to_csv(INPUT_DATA_FILE)
+    data.to_csv(BASIC_DATA_FILE)
     tmp=data.groupby('Symbol').apply(group_cal)
     tmp=mark_single_quote(tmp)
     end=timeit.default_timer()
@@ -120,6 +122,9 @@ def find_special(data,bench):
     res=pd.concat((ab,vh,ah,ah2),ignore_index=True)
     #res.set_index('Date',inplace=True)
     today=res[res.Date == bench]
+    top=top_industry(data)
+    res=today.merge(top,on='Symbol')
+    today=res
     print("*********************************what's special today:\n",today)
     return today
 
@@ -210,14 +215,14 @@ def sortMark(df,num=3):
 
 def get_industry_data(df,key='Industry',src='Local'):
     if src == 'Local':
-        bas=pd.read_csv('finance.csv')
+        bas=pd.read_csv(FINANCE_FILE)
     else:
         bas=ts.get_stock_basics()
         bas.reset_index(inplace=True)
         bas.code=bas.code.apply(market)
         bas.columns=[['Symbol','Name', 'Industry', 'Area', 'pe', 'outstanding', 'totals','totalAssets', 'liquidAssets', 'fixedAssets', 'reserved','reservedPerShare', 'esp', 'bvps', 'pb', 'timeToMarket', 'undp','perundp', 'rev', 'profit', 'gpr', 'npr', 'holders']]
         bas[['Symbol','Name']].to_csv('allsymbols.csv')
-        bas.to_csv('finance.csv')
+        bas.to_csv(FINANCE_FILE)
     data=pd.merge(df,bas[['Symbol','Name',key]],on='Symbol')
     return data
     #cpt=DataFrame()
@@ -317,12 +322,14 @@ def away51Top(data,bench,num=3,key='Industry'):
     r51=away51(data,bench)
     res=r51.merge(tops,on='Symbol')
     res=res[['Date','Close','Symbol','Name',key,'ma51','mark_y']]
+    print(res)
     #print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     #res=res.sort('Industry')
     return res
 
 def away51(m51,date):
-    r51=m51[(( m51.Close > (m51.ma51*1.1))|(m51.Close < (m51.ma51*0.9)))&(m51.Date == date)]
+    r51=m51[((m51.Close < (m51.ma51*0.9)))&(m51.Date == date)]
+    #r51=m51[(( m51.Close > (m51.ma51*1.1))|(m51.Close < (m51.ma51*0.9)))&(m51.Date == date)]
     return r51
 
 def run():
@@ -330,22 +337,24 @@ def run():
     data=DataFrame()
     if args.methods == 'basic':
         print('*****basic data processing *********')
-        data=initDataSet(INPUT_DATA_FILE)
+        data=initDataSet(BASIC_DATA_FILE)
         #basics_cal(data)
         #mark_all_down(data)
         data=group_process(data)
         data.to_csv(OUTPUT_DATA_FILE)
         return
     elif args.methods == 'foundation':
-        data=initDataSet(INPUT_DATA_FILE)
+        data=initDataSet(BASIC_DATA_FILE)
         data=get_industry_data(data)
         data.to_csv(OUTPUT_DATA_FILE)
         return
+    elif args.methods == 'finance' :
+         updateConcept()
+         return
     elif args.methods == 'report':
-        data=initDataSet(INPUT_DATA_FILE)
-        data=group_process(data)
+        d0=initDataSet(BASIC_DATA_FILE)
+        data=group_process(d0)
         out=away51Top(data,args.end_date)
-        print(out)
         find_special(data,args.end_date)
         data.to_csv(OUTPUT_DATA_FILE)
         return
@@ -353,23 +362,36 @@ def run():
     if args.methods == 'away51':
         out=away51Top(data,args.end_date)
         #out.to_csv('away51top.csv')
-        print(out)
     elif args.methods=='rank':
         rank_industry(data,args.symbol,args.industry,args.category)
     elif args.methods == 'special':
         find_special(data,args.end_date)
+    elif args.methods == 'high':
+        find_high(data,args.end_date)
     data.to_csv(OUTPUT_DATA_FILE)
 
 def initDataSet(inputFile):
     start=timeit.default_timer()
     data=pd.read_csv(inputFile)
     data=cleanData(data)
-    data.Date=data.Date.astype('str')
-    data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00',''))
-    data.Date=pd.to_datetime(data.Date)
+    if 'Date' in data :
+        data.Date=data.Date.astype('str')
+        data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00',''))
+        data.Date=pd.to_datetime(data.Date)
     end=timeit.default_timer()
     print('********************initDataSet takes '+str(end-start)+'s')
     return data
+
+def updateConcept(key='concept'):
+    con=ts.get_concept_classified()
+    con.columns=['code', 'Name', key]
+    fi=initDataSet(FINANCE_FILE)
+    if key in fi:
+        fi.drop(key,axis=1,inplace=True)
+        fi.drop_duplicates(inplace=True)
+    res=pd.merge(fi,con[['Name', key]],on='Name')
+    res.to_csv(FINANCE_FILE)
+    return res
 
 def cleanData(data):
     if 'Unnamed: 0' in data:

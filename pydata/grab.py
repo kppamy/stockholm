@@ -416,4 +416,7 @@ class Grab(object):
             q=pd.DataFrame.from_csv('crawl.csv')
             res=pd.concat((q,f),ignore_index=True)
             res.drop_duplicates(inplace=True)
-        res.to_csv('crawl.csv')
+        if res is not None:
+           res.to_csv('crawl.csv')
+        elif :
+           print("!!!!!!!!!!!!!!!!!!!!!result is nulll!!!!!!!!!!!!!!!!")

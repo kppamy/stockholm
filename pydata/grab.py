@@ -16,9 +16,10 @@ from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 from liteDB import *
 import pandas as pd
+from  const import *
+import tushare as ts
 import numpy as np
-DATEFORMAT='%Y-%m-%d'
-DATA_HEAD=['Date', 'Open', 'High','Low','Close','Volume','Adj_Close','Symbol']
+
 class Grab(object):
     def __init__(self, args):
         ## flag of if need to reload all stock data
@@ -242,9 +243,10 @@ class Grab(object):
         print('load '+symbol +'    '+ start_date+'-----'+end_date )
         return quote['Data']
 
-    def load_quote_data(self, quote, start_date, end_date, is_retry, counter):
+    def load_quote_data(self, quote, start_date, end_date, is_retry, counter,source):
         start = timeit.default_timer()
         if(quote is not None and 'Symbol' in quote ):
+            quote=self.load_onequote_yahoo(quote,start_date,end_date)
             yquery = 'select * from yahoo.finance.historicaldata where symbol = "' + quote['Symbol'].upper() + '" and startDate = "' + start_date + '" and endDate = "' + end_date + '"'
             #r_params = {'q': yquery, 'format': 'json', 'env': 'http://datatables.org/alltables.env'}
             r_params = {'q': yquery, 'format': 'json', 'env': 'store://datatables.org/alltableswithkeys'}
@@ -266,7 +268,12 @@ class Grab(object):
                     self.load_quote_data(quote, start_date, end_date, True, counter) ## retry once for network issue
         return quote
 
-    def load_all_quote_data(self, all_quotes, start_date, end_date):
+    def load_all_quote_data_tushare(self, all_quotes, start_date, end_date):
+        print("quotes: ", all_quotes)
+        data=ts.get_hists(all_quotes, start_date, end_date, retry_count=2)
+        return data
+
+    def load_all_quote_data_yahoo(self, all_quotes, start_date, end_date):
         print("load_all_quote_data start...start:%s , end:%s,\n"%(start_date,end_date))
         start = timeit.default_timer()
         counter = []
@@ -324,29 +331,34 @@ class Grab(object):
 
     def data_load(self, start_date, end_date, output_types):
         #all_quotes = self.load_all_quote_symbol()
-        df=pd.read_csv('allsymbols.csv')
+        df=pd.read_csv(SYMBOL_FILE)
         all_quotes=df.to_dict('records')
         some_quotes = all_quotes[:]
         #self.load_all_quote_info(some_quotes)
-        self.load_all_quote_data(some_quotes, start_date, end_date)
+        self.load_all_quote_data(df.Symbol, start_date, end_date)
         self.data_export(some_quotes, output_types, None)
         df=self.convert2DataFrame(self.all_quotes_data)
         fails=pd.DataFrame(self.all_quotes_fail,columns=['symbol','name'])
-        fails.to_csv('fail.csv')
+        fails.to_csv(FAIL_RECORDS_FILE)
         return df
+
+    def data_load_tushare(self, start_date, end_date):
+        df=pd.read_csv(SYMBOL_FILE)
+        symbls=df.Symbol.apply(symbl2num)
+        data = self.load_all_quote_data_tushare(symbls[:200], start_date, end_date)
+        return data
 
     def try_elim_fail(self,start_date,end_date,output_types):
         df=pd.read_csv('fail.csv')
         all_quotes=df.to_dict('records')
         some_quotes = all_quotes
-        self.load_all_quote_data(some_quotes, start_date, end_date)
+        self.load_all_quote_data_yahoo(some_quotes, start_date, end_date)
         self.data_export(some_quotes, output_types, None)
         df=self.convert2DataFrame(self.all_quotes_data)
         fails=pd.DataFrame(self.all_quotes_fail,columns=['symbol','name'])
         if len(fails) > 0 :
             fails.to_csv('fail2.csv')
         return df
-
 
     def convert_allinone_dtyp(self):
         self.allinone['code']=self.allinone['code'].astype('str')
@@ -392,6 +404,9 @@ class Grab(object):
 
     def run(self):
         ## output types
+        start = timeit.default_timer()
+        print("==============startdate============= ", self.start_date)
+        print("==============enddate============= ", self.end_date)
         output_types = []
         if(self.output_type == "json"):
             output_types.append("json")
@@ -401,7 +416,7 @@ class Grab(object):
             output_types = ["json", "csv"]
         res=pd.DataFrame([],columns=DATA_HEAD)
         if self.update == 'Y':
-            res=self.data_load(self.start_date, self.end_date, output_types)
+            res=self.data_load_tushare(self.start_date, self.end_date)
         elif self.updateone == 'all':
             res=self.get_whole_quote_hist(self.symbol)
             res.to_csv(self.symbol[:6]+'.csv')
@@ -418,5 +433,6 @@ class Grab(object):
             res.drop_duplicates(inplace=True)
         if res is not None:
            res.to_csv('crawl.csv')
-        elif :
+        else:
            print("!!!!!!!!!!!!!!!!!!!!!result is nulll!!!!!!!!!!!!!!!!")
+        print("Grab finish in:  " + str(round(timeit.default_timer() - start)) + "s" + "\n")

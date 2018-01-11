@@ -14,13 +14,7 @@ import pandas as pd
 from pandas import DataFrame
 import numpy as np
 import tushare as ts
-
-DATEFORMAT='%Y-%m-%d'
-DATA_HEAD=['Date','Open','High','Low','Close','Volume','Adj_Close','Symbol']
-DATA_HEAD_ALL=[['Industry_Code', 'Industry', 'Code', 'Name', 'Area','Concept_Code', 'Concept_Name']]
-BASIC_DATA_FILE='basic.csv'
-FINANCE_FILE='finance.csv'
-OUTPUT_DATA_FILE='data.csv'
+from const import *
 
 def mark_single_quote(quote):
     df=quote
@@ -147,7 +141,6 @@ def find_longShort(data,bench):
     res=pd.concat((long,short),ignore_index=True)
     return res
 
-
 def specialTop(special):
     top=readCsv('top.csv')
     spe=pd.merge(special,top,on=['Symbol'])
@@ -213,15 +206,15 @@ def sortMark(df,num=3):
     res=df.sort_values(by='mark',ascending=0)
     return res[:num]
 
-def get_industry_data(df,key='Industry',src='Local'):
-    if src == 'Local':
+def get_industry_data(df, source='Online', key='Industry'):
+    if source == 'Local':
         bas=pd.read_csv(FINANCE_FILE)
     else:
         bas=ts.get_stock_basics()
         bas.reset_index(inplace=True)
-        bas.code=bas.code.apply(market)
+        bas.code=bas.code.apply(num2symbl)
         bas.columns=[['Symbol','Name', 'Industry', 'Area', 'pe', 'outstanding', 'totals','totalAssets', 'liquidAssets', 'fixedAssets', 'reserved','reservedPerShare', 'esp', 'bvps', 'pb', 'timeToMarket', 'undp','perundp', 'rev', 'profit', 'gpr', 'npr', 'holders']]
-        bas[['Symbol','Name']].to_csv('allsymbols.csv')
+        bas[DATA_HEAD_SHORT].to_csv(SYMBOL_FILE)
         bas.to_csv(FINANCE_FILE)
     data=pd.merge(df,bas[['Symbol','Name',key]],on='Symbol')
     return data
@@ -239,13 +232,6 @@ def get_industry_data(df,key='Industry',src='Local'):
     #    data.drop('Industry',axis=1,inplace=True)
     #data['Industry']=data.c_name
     #data.drop('c_name',axis=1,inplace=True)
-
-def market(x):
-    if x.startswith('60'):
-        x=x+'.SS'
-    else :
-        x=x+'.SZ'
-    return x
 
 def getSymbolDict(df):
     df.reset_index(inplace=True)
@@ -376,7 +362,7 @@ def initDataSet(inputFile):
     data=cleanData(data)
     if 'Date' in data :
         data.Date=data.Date.astype('str')
-        data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00',''))
+        data.Date=data.Date.apply(lambda x: x.replace(' 00:00:00.000000',''))
         data.Date=pd.to_datetime(data.Date)
     end=timeit.default_timer()
     print('********************initDataSet takes '+str(end-start)+'s')

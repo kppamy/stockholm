@@ -36,6 +36,7 @@ class Grab(object):
         self.end_date = args.end_date
         ## portfolio generating target date
         self.target_date = args.target_date
+        self.CRAWL_FILE_NAME = 'craw' + self.start_date.replace('-', '') + '_' + self.end_date.replace('-', '') + '.csv'
         ## thread number
         self.thread = args.thread
         ## data file store path
@@ -56,7 +57,6 @@ class Grab(object):
         ## self.sz399005 = {'Symbol': '399005.SZ', 'Name': '中小板指'}
         ## self.sz399006 = {'Symbol': '399006.SZ', 'Name': '创业板指'}
         #self.collection_name = 'testing_method'
-
         self.all_quotes_fail=[['Symbol','Name']]
         self.all_quotes_data=[]
         self.update=args.update
@@ -345,7 +345,14 @@ class Grab(object):
     def data_load_tushare(self, start_date, end_date):
         df=pd.read_csv(SYMBOL_FILE)
         symbls=df.Symbol.apply(symbl2num)
-        data = self.load_all_quote_data_tushare(symbls[:200], start_date, end_date)
+        data = pd.DataFrame()
+        retry = pd. DataFrame()
+        fail_symbls = []
+        data, fail_symbls = self.load_all_quote_data_tushare(symbls, start_date, end_date)
+        while len(fail_symbls) > 50:
+            retry, fail_symbls = self.load_all_quote_data_tushare(fail_symbls, start_date, end_date)
+            data.append(retry)
+        print(" failed to download " + str(len(fail_symbls)) + " symbols")
         return data
 
     def try_elim_fail(self,start_date,end_date,output_types):
@@ -406,7 +413,7 @@ class Grab(object):
         ## output types
         start = timeit.default_timer()
         print("==============startdate============= ", self.start_date)
-        print("==============enddate============= ", self.end_date)
+        print("==============enddate=============== ", self.end_date)
         output_types = []
         if(self.output_type == "json"):
             output_types.append("json")
@@ -414,25 +421,26 @@ class Grab(object):
             output_types.append("csv")
         elif(self.output_type == "all"):
             output_types = ["json", "csv"]
-        res=pd.DataFrame([],columns=DATA_HEAD)
+        #res=pd.DataFrame([],columns=DATA_HEAD)
+        res = pd.DataFrame()
         if self.update == 'Y':
-            res=self.data_load_tushare(self.start_date, self.end_date)
+            res = self.data_load_tushare(self.start_date, self.end_date)
         elif self.updateone == 'all':
-            res=self.get_whole_quote_hist(self.symbol)
-            res.to_csv(self.symbol[:6]+'.csv')
+            res = self.get_whole_quote_hist(self.symbol)
+            res.to_csv(symbl2num(self.symbol)+'.csv')
             return
-        elif self.updateone == 'range' :
-            res=self.get_quote_hist(self.symbol)
+        elif self.updateone == 'range':
+            res = self.get_quote_hist(self.symbol)
             print(res)
-            res.to_csv(self.symbol[:6]+'.csv')
+            res.to_csv(symbl2num(self.symbol)+'.csv')
             return
         if self.reload_data == 'Y':
             f=self.try_elim_fail(self.start_date, self.end_date, output_types)
-            q=pd.DataFrame.from_csv('crawl.csv')
+            q=pd.DataFrame.from_csv(self.CRAWL_FILE_NAME)
             res=pd.concat((q,f),ignore_index=True)
             res.drop_duplicates(inplace=True)
         if res is not None:
-           res.to_csv('crawl.csv')
+           res.to_csv(self.CRAWL_FILE_NAME)
         else:
            print("!!!!!!!!!!!!!!!!!!!!!result is nulll!!!!!!!!!!!!!!!!")
         print("Grab finish in:  " + str(round(timeit.default_timer() - start)) + "s" + "\n")

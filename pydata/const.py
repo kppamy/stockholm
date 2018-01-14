@@ -10,6 +10,7 @@ FINANCE_HEAD = ['code', 'name', 'industry', 'area', 'pe', 'outstanding', 'totals
                 'fixedassets', 'reserved', 'reservedpershare', 'esp', 'bvps', 'pb', 'timetomarket', 'undp', 'perundp',
                 'rev', 'profit', 'gpr', 'npr', 'holders']
 MIN_HEAD = ['code', 'name']
+BASCIC_KEY = 'code'
 BASIC_DATA_FILE = 'basic.csv'
 FINANCE_FILE = 'finance.csv'
 OUTPUT_DATA_FILE = 'data.csv'

@@ -121,7 +121,7 @@ def find_special(data, bench):
     res = pd.concat((ab, vh, ah, ah2), ignore_index=True)
     # res.set_index('Date',inplace = True)
     today = res[res.Date == bench]
-    top = top_industry(data)
+    top = top_industry(data, 'industry', None)
     res = today.merge(top, on='code')
     today = res
     print("*********************************what's special today:\n", today)
@@ -133,7 +133,7 @@ def find_high(data, bench, atr=3):
     col = [u'code', u'Date']
     ah3 = df[((df['max'] - df.close) / df['max']) < (atr / 100)][col]
     ah3['reason'] = 'no more than ' + str(atr) + '% away from max'
-    top = top_industry(data)
+    top = top_industry(data, 'industry', None)
     today = ah3[ah3.Date == bench]
     res = today.merge(top, on='code')
     print('*************************climb**************************')
@@ -195,25 +195,44 @@ def ma_cal(df):
     df['ma51'] = prc.rolling(51).mean()
 
 
-def top_industry(data, key='industry', num=3):
-    marks = data[['code', 'name', 'mark', key]].groupby(['code', 'name', key])['mark'].sum()
+def top_industry(data, key='industry', value=None, num=3):
+    """
+    Show top N symbols in each industry/area/concept
+    All rank symbols in certain industry/area/concept
+    :param data:
+    type: Pd.DataFrame
+    :param key:
+    type: str
+    can be one of industry/area/concept
+    :param value:
+    type: str
+    the value of the selected key industry/area/concept
+    default is None, show top N in each industry/area/concept
+    :param num:
+    type: int
+    when set to None, rank symbols in certain industry/area/concept
+    :return:
+    """
+    s1 = pd.Series(MIN_HEAD)
+    s2 = pd.Series([key])
+    s3 = pd.concat([s1, s2])
+    s4 = pd.concat([s3, pd.Series('mark')])
+    if value is None:
+        marks = data[s4].groupby(s3.tolist())['mark'].sum()
+    else:
+        select = data[data[key] == value]
+        marks = select[s4].groupby(s3.tolist())['mark'].sum()
     marks = marks.reset_index()
     res = pd.DataFrame()
-    res = marks.groupby(key, group_keys=False).apply(sortMark, num)
-    # print(res)
-    # industrys = data[key].drop_duplicates()
-    # industrys = industrys.dropna()
-    # for x in industrys:
-    #    mark_ind = marks[:,x]
-    #    mark_sort = mark_ind.sort_values()
-    #    tmp = mark_sort[-n:]
-    #    print("\n########################top "+ str(n)+ " of ",(x)," :\n",tmp)
-    #    res = res.append(tmp.reset_index())
-    # res.to_csv('top.csv')
+    if num is None:
+        res = marks.sort_values(by='mark', ascending=0)
+    else:
+        res = marks.groupby(key, group_keys=False).apply(sort_mark, num)
+    res.to_csv('top.csv')
     return res
 
 
-def sortMark(df, num=3):
+def sort_mark(df, num=3):
     res = df.sort_values(by='mark', ascending=0)
     return res[:num]
 
@@ -263,29 +282,24 @@ def symbol_convert(x, dic):
         return x
 
 
-def rank_industry(data, symbol, industry, key='industry'):
+def rank_industry(data, industry_value, symbol=None, key='industry'):
     """
     get an industry mark rank through a stock
     symbol:string, the symbol of the code
     """
-    # data = pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
-    # data = get_industry_data(data, key)
-    # data.reset_index(inplace = True)
-    gb = data[MIN_HEAD.append([key, 'mark'])].groupby(MIN_HEAD.append(key)).sum()
-    gb = gb.reset_index()
-    ind = industry
-    res = pd.DataFrame()
-    if industry is None or industry == '':
-        ind = gb[gb.symbol == symbol][key]
-        res = gb[gb[key] == ind.values[0]]
-        industry = ind.values[0]
+    select = None
+    if industry_value is None or industry_value == '':
+        industry_name = data[data[BASCIC_KEY] == symbol][key].drop_duplicates()
+        values = industry_name.values
+        if len(values) > 1:
+            print('attention!!! ' + symbol + "belongs to multiple " + key + ' you need to update API : rank_industry')
+        select = values[0]
     else:
-        res = gb[gb[key] == industry]
-    res = res.sort_values(by='mark', ascending=False)
-    res.reindex()
-    res['ranks'] = res['mark'].rank(method='first')
-    res.to_csv('rank' + industry + '.csv')
-    print(res)
+        select = industry_value
+    if select is None:
+        print("Please identify name of symbol or industry for search")
+    else:
+        return top_industry(data, key, select, None)
 
 
 def basics_cal(all_quotes):
@@ -321,7 +335,7 @@ def basics_cal(all_quotes):
 
 
 def away51Top(data, bench, num=3, key='industry'):
-    tops = top_industry(data, key, num)
+    tops = top_industry(data, key, None, num)
     r51 = away51(data, bench)
     res = r51.merge(tops, on=['code', 'name', key])
     res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
@@ -340,7 +354,7 @@ def away51(m51, date):
 def init_data_set(input_file):
     start = timeit.default_timer()
     try:
-        data = pd.read_csv(input_file,dtype={'code': 'str'})
+        data = pd.read_csv(input_file, dtype={'code': 'str'})
     except FileNotFoundError:
         print(input_file + ' doesn\'t exist ')
         return None
@@ -381,7 +395,6 @@ def clean_data(data):
 
 def run():
     args = option.parser.parse_args()
-    args.methods = 'away51'
     CRAWL_FILE_NAME = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     data = pd.DataFrame()
     if args.methods == 'basic':
@@ -414,7 +427,8 @@ def run():
         out = away51Top(data, args.end_date)
         out.to_csv('away51top.csv')
     elif args.methods == 'rank':
-        rank_industry(data, args.symbol, args.industry, args.category)
+        res = rank_industry(data, args.industry, args.symbol, args.category)
+        print(res)
     elif args.methods == 'special':
         find_special(data, args.end_date)
     elif args.methods == 'high':

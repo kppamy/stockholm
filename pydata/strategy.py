@@ -282,7 +282,7 @@ def symbol_convert(x, dic):
         return x
 
 
-def rank_industry(data, industry_value, symbol=None, key='industry'):
+def rank_industry(data, industry_value=None, symbol=None, key='industry'):
     """
     get an industry mark rank through a stock
     symbol:string, the symbol of the code
@@ -291,6 +291,9 @@ def rank_industry(data, industry_value, symbol=None, key='industry'):
     if industry_value is None or industry_value == '':
         industry_name = data[data[BASCIC_KEY] == symbol][key].drop_duplicates()
         values = industry_name.values
+        if len(values) == 0:
+            print('There is no data found for symbol '+ symbol)
+            return
         if len(values) > 1:
             print('attention!!! ' + symbol + "belongs to multiple " + key + ' you need to update API : rank_industry')
         select = values[0]

@@ -46,7 +46,7 @@ def group_process(data, new=None):
         data = pd.concat((d1, new), ignore_index=True)
     data = data.drop_duplicates()
     data.to_csv(BASIC_DATA_FILE)
-    tmp = data.groupby('code').apply(group_cal)
+    tmp = data.groupby(BASCIC_KEY).apply(group_cal)
     tmp = mark_single_quote(tmp)
     end = timeit.default_timer()
     print("basic group compute takes " + str(round(end - start)) + "s ")
@@ -213,15 +213,13 @@ def top_industry(data, key='industry', value=None, num=3):
     when set to None, rank symbols in certain industry/area/concept
     :return:
     """
-    s1 = pd.Series(MIN_HEAD)
-    s2 = pd.Series([key])
-    s3 = pd.concat([s1, s2])
-    s4 = pd.concat([s3, pd.Series('mark')])
+    s3 = append_list(MIN_HEAD, [key])
+    s4 = append_list(s3, ['mark'])
     if value is None:
-        marks = data[s4].groupby(s3.tolist())['mark'].sum()
+        marks = data[s4].groupby(s3)['mark'].sum()
     else:
         select = data[data[key] == value]
-        marks = select[s4].groupby(s3.tolist())['mark'].sum()
+        marks = select[s4].groupby(s3)['mark'].sum()
     marks = marks.reset_index()
     res = pd.DataFrame()
     if num is None:
@@ -239,30 +237,20 @@ def sort_mark(df, num=3):
 
 def get_industry_data(df, source='Local', key='industry'):
     if source == 'Local':
-        bas = pd.read_csv(FINANCE_FILE)
+        finance = init_data_set(FINANCE_FILE)
     else:
-        bas = ts.get_stock_basics()
-        bas.reset_index(inplace=True)
-        bas.columns = FINANCE_HEAD
-        bas[MIN_HEAD].to_csv(SYMBOL_FILE)
-        bas.to_csv(FINANCE_FILE)
-    MIN_HEAD.append(key)
-    data = pd.merge(df, bas[MIN_HEAD], on='code')
+        finance = ts.get_stock_basics()
+        finance.reset_index(inplace=True)
+        finance.columns = FINANCE_HEAD
+        finance[MIN_HEAD].to_csv(SYMBOL_FILE)
+        finance.to_csv(FINANCE_FILE)
+    mcolumns = append_list(MIN_HEAD, [key])
+    if key in df.columns:
+        mkeys = mcolumns
+    else:
+        mkeys = MIN_HEAD
+    data = pd.merge(df, finance[mcolumns], on=mkeys)
     return data
-    # cpt = DataFrame()
-    # if type   ==   'concept':
-    #    cpt = pd.read_csv('concept_detail.csv',dtype = 'str')
-    # elif type   ==   'ind':
-    #    cpt = pd.read_csv('industry_detail.csv',dtype = 'str')
-    # cpt.drop(['Unnamed: 0'],inplace = True,axis = 1)
-    # dic = getsymbolDict(df)
-    # cpt['code'] = cpt.code.apply(lambda x:symbolConvert(x,dic))
-    # cpt.drop(['code'],inplace = True,axis = 1)
-    # df.drop('code',axis = 1,inplace = True)
-    # if 'Industry' in data:
-    #    data.drop('Industry',axis = 1,inplace = True)
-    # data['Industry'] = data.c_name
-    # data.drop('c_name',axis = 1,inplace = True)
 
 
 def get_symbol_dict(df):
@@ -340,12 +328,17 @@ def basics_cal(all_quotes):
 def away51Top(data, bench, num=3, key='industry'):
     tops = top_industry(data, key, None, num)
     r51 = away51(data, bench)
-    res = r51.merge(tops, on=['code', 'name', key])
+    mkeys = append_list(MIN_HEAD, [key])
+    res = r51.merge(tops, on=mkeys)
     res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
     print(res)
     # print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     # res = res.sort('Industry')
     return res
+
+
+def append_list(list1, list2):
+    return pd.concat([pd.Series(list1), pd.Series(list2)]).tolist()
 
 
 def away51(m51, date):
@@ -357,7 +350,7 @@ def away51(m51, date):
 def init_data_set(input_file):
     start = timeit.default_timer()
     try:
-        data = pd.read_csv(input_file, dtype={'code': 'str'})
+        data = pd.read_csv(input_file, dtype=CODE_DTYPE)
     except FileNotFoundError:
         print(input_file + ' doesn\'t exist ')
         return None
@@ -388,32 +381,40 @@ def clean_data(data):
         data = data.drop('Unnamed: 0', axis=1)
     if 'Unnamed: 0.1' in data:
         data = data.drop('Unnamed: 0.1', axis=1)
-    if 'symbol.1' in data:
-        data.drop('symbol.1', axis=1, inplace=True)
+    if 'Unnamed: 1' in data:
+        data = data.drop('Unnamed: 1', axis=1)
+    if 'code.1' in data:
+        data.drop('code.1', axis=1, inplace=True)
     if 'index' in data:
         data.drop('index', axis=1, inplace=True)
     data.drop_duplicates(inplace=True)
     return data
 
 
+def set_test_args(args, method, end_date, symbol, industry, category):
+    args.methods = method
+    args.symbol = symbol
+    args.category = category
+    # args.industry = industry
+    args.end_date = end_date
+    return args
+
+
 def run():
     args = option.parser.parse_args()
-    CRAWL_FILE_NAME = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
+    crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     data = pd.DataFrame()
+    # args = set_test_args(args, 'rank', '2018-01-11', '601009', '浙江', 'area')
     if args.methods == 'basic':
         print('*****basic data processing *********')
         data = init_data_set(BASIC_DATA_FILE)
-        new = init_data_set(CRAWL_FILE_NAME)
+        new = init_data_set(crawl_file_name)
         # basics_cal(data)
         # mark_all_down(data)
         data = group_process(data, new)
-        data.to_csv(OUTPUT_DATA_FILE)
-        return
     elif args.methods == 'foundation':
         data = init_data_set(OUTPUT_DATA_FILE)
-        data = get_industry_data(data, source='online')
-        data.to_csv(OUTPUT_DATA_FILE)
-        return
+        data = get_industry_data(data, key=args.category)
     elif args.methods == 'finance':
         update_concept()
         return
@@ -422,11 +423,11 @@ def run():
         data = group_process(d0)
         out = away51Top(data, args.end_date)
         find_special(data, args.end_date)
+    if len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         return
     data = init_data_set(OUTPUT_DATA_FILE)
     if args.methods == 'away51':
-        args.end_date = '2018-01-11'
         out = away51Top(data, args.end_date)
         out.to_csv('away51top.csv')
     elif args.methods == 'rank':
@@ -436,7 +437,6 @@ def run():
         find_special(data, args.end_date)
     elif args.methods == 'high':
         find_high(data, args.end_date)
-    data.to_csv(OUTPUT_DATA_FILE)
 
 
 if __name__ == '__main__':

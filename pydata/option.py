@@ -26,7 +26,7 @@ _default = dict(
     updateone='N',
     symbol='',
     industry='',
-    category='Industry'
+    category='industry'
     )
 
 parser = argparse.ArgumentParser(description='A crawler and portfolio testing framework.')

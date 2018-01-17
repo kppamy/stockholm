@@ -32,7 +32,7 @@ def group_cal(df):
     # df['price_change'] = df['close'].pct_change()
     # df['ma5'] = df['close'].rolling(5).mean()
     # df['ma20' ] = df['close'].rolling(20).mean()
-    # df['ma30'] = df['close'].rolling(30).mean()
+    df['ma30'] = df['close'].rolling(30).mean()
     df['price_chg_aggr'] = df['price_change'].rolling(3).sum()
     df['max'] = df.close.max()
     df.fillna(method='ffill', inplace=True)
@@ -57,8 +57,8 @@ def read_csv(file):
     q = pd.read_csv(file)
     q = q.drop('Unnamed: 0', axis=1)
     q.drop_duplicates(inplace=True)
-    if 'Date' in q:
-        q.Date = pd.to_datetime(q.Date)
+    if 'date' in q:
+        q.date = pd.to_datetime(q.date)
     return q
 
 
@@ -103,11 +103,10 @@ def group_mean(df, column='volume', n=6):
 
 def find_special(data, bench):
     if data is None:
-        data = pd.DataFrame.from_csv(OUTPUT_DATA_FILE)
+        data = init_data_set(OUTPUT_DATA_FILE)
     df = data
-    df = df.reset_index()
     df.drop_duplicates(inplace=True)
-    col = [u'code', u'Date']
+    col = [u'code', u'date']
     ab = df[(df.price_change > 0.08) | (df.price_change < -0.08)][col]
     ab['reason'] = '+_8%'
     vh = df[df.volume > (df.v6 * 3)][col]
@@ -119,8 +118,8 @@ def find_special(data, bench):
     # ah4 = df[((df['max']-df.close)/df['max'])< 0.1)][col]
     # ah4['reason'] = 'no more than 10% away from max'
     res = pd.concat((ab, vh, ah, ah2), ignore_index=True)
-    # res.set_index('Date',inplace = True)
-    today = res[res.Date == bench]
+    # res.set_index('date',inplace = True)
+    today = res[res.date == bench]
     top = top_industry(data, 'industry', None)
     res = today.merge(top, on='code')
     today = res
@@ -130,11 +129,11 @@ def find_special(data, bench):
 
 def find_high(data, bench, atr=3):
     df = data
-    col = [u'code', u'Date']
+    col = [u'code', u'date']
     ah3 = df[((df['max'] - df.close) / df['max']) < (atr / 100)][col]
     ah3['reason'] = 'no more than ' + str(atr) + '% away from max'
     top = top_industry(data, 'industry', None)
-    today = ah3[ah3.Date == bench]
+    today = ah3[ah3.date == bench]
     res = today.merge(top, on='code')
     print('*************************climb**************************')
     print(res)
@@ -146,6 +145,7 @@ def find_long_short(data, bench):
     long = is_long(bench, df)
     short = is_short(bench, df)
     res = pd.concat((long, short), ignore_index=True)
+    print(res)
     return res
 
 
@@ -156,19 +156,19 @@ def special_top(special):
 
 
 def is_long(day, data):
-    df = data[data['Date'] == day]
+    df = data[data['date'] == day]
     lg = df[(df.close > df.ma5) & (df.ma5 > df.ma20) & (df.ma20 > df.ma30) & (df.ma30 > df.ma51)]
     if len(lg) > 0:
-        lg['reason'] = 'long array'
+        lg.loc[:, 'reason'] = 'long array'
         return lg
     return None
 
 
 def is_short(day, data):
-    df = data[data['Date'] == day]
+    df = data[data['date'] == day]
     lg = df[(df.close < df.ma5) & (df.ma5 < df.ma20) & (df.ma20 < df.ma30) & (df.ma30 < df.ma51)]
     if len(lg) > 0:
-        lg['reason'] = 'short array'
+        lg.loc[:, 'reason'] = 'short array'
         return lg
     return None
 
@@ -297,7 +297,7 @@ def basics_cal(all_quotes):
     start = timeit.default_timer()
     st = all_quotes
     # st = st.drop('Unnamed: 0',axis = 1)
-    # st.columns = ['name','code','Adj_close','close','Date','High','Low','Open','code','volume']
+    # st.columns = ['name','code','Adj_close','close','date','High','Low','Open','code','volume']
     # st = st.drop('code',axis = 1)
     symbols = st.symbol
     sym = symbols.drop_duplicates()
@@ -325,7 +325,7 @@ def basics_cal(all_quotes):
     return all_marks
 
 
-def away51Top(data, bench, num=3, key='industry'):
+def away51_top(data, bench, num=3, key='industry'):
     tops = top_industry(data, key, None, num)
     r51 = away51(data, bench)
     mkeys = append_list(MIN_HEAD, [key])
@@ -355,10 +355,10 @@ def init_data_set(input_file):
         print(input_file + ' doesn\'t exist ')
         return None
     data = clean_data(data)
-    if 'Date' in data:
-        data.Date = data.Date.astype('str')
-        data.Date = data.Date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
-        data.Date = pd.to_datetime(data.Date)
+    if 'date' in data:
+        data.date = data.date.astype('str')
+        data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
+        data.date = pd.to_datetime(data.date)
     end = timeit.default_timer()
     print('********************initDataSet takes ' + str(end - start) + 's')
     return data
@@ -366,12 +366,12 @@ def init_data_set(input_file):
 
 def update_concept(key='concept'):
     con = ts.get_concept_classified()
-    con.columns = ['code', 'Name', key]
-    fi = init_data_set(FINANCE_FILE)
-    if key in fi:
-        fi.drop(key, axis=1, inplace=True)
-        fi.drop_duplicates(inplace=True)
-    res = pd.merge(fi, con[['Name', key]], on='Name')
+    con.columns = append_list(MIN_HEAD, [key])
+    finance_data = init_data_set(FINANCE_FILE)
+    if key in finance_data:
+        finance_data.drop(key, axis=1, inplace=True)
+        finance_data.drop_duplicates(inplace=True)
+    res = pd.merge(finance_data, con[['Name', key]], on='Name')
     res.to_csv(FINANCE_FILE)
     return res
 
@@ -395,7 +395,7 @@ def set_test_args(args, method, end_date, symbol, industry, category):
     args.methods = method
     args.symbol = symbol
     args.category = category
-    # args.industry = industry
+    args.industry = industry
     args.end_date = end_date
     return args
 
@@ -404,7 +404,7 @@ def run():
     args = option.parser.parse_args()
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     data = pd.DataFrame()
-    # args = set_test_args(args, 'rank', '2018-01-11', '601009', '浙江', 'area')
+    # args = set_test_args(args, 'high', '2018-01-11', '601009', '保险', 'industry')
     if args.methods == 'basic':
         print('*****basic data processing *********')
         data = init_data_set(BASIC_DATA_FILE)
@@ -419,16 +419,17 @@ def run():
         update_concept()
         return
     elif args.methods == 'report':
-        d0 = init_data_set(BASIC_DATA_FILE)
-        data = group_process(d0)
-        out = away51Top(data, args.end_date)
+        data = init_data_set(BASIC_DATA_FILE)
+        new = init_data_set(crawl_file_name)
+        data = group_process(data, new)
+        out = away51_top(data, args.end_date, key=args.category)
         find_special(data, args.end_date)
     if len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         return
     data = init_data_set(OUTPUT_DATA_FILE)
     if args.methods == 'away51':
-        out = away51Top(data, args.end_date)
+        out = away51_top(data, args.end_date, key=args.category)
         out.to_csv('away51top.csv')
     elif args.methods == 'rank':
         res = rank_industry(data, args.industry, args.symbol, args.category)
@@ -437,6 +438,7 @@ def run():
         find_special(data, args.end_date)
     elif args.methods == 'high':
         find_high(data, args.end_date)
+        find_long_short(data, args.end_date)
 
 
 if __name__ == '__main__':

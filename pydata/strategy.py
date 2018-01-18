@@ -5,9 +5,10 @@ from liteDB import *
 import pandas as pd
 import tushare as ts
 from const import *
+import numpy as np
 
 
-def mark_single_quote(quote):
+def __mark_single_quote(quote):
     df = quote
     df['mark'] = 0
     df.loc[(df.v_change > 0) & (df.price_change > 0), 'mark'] = 2
@@ -17,7 +18,7 @@ def mark_single_quote(quote):
     return df
 
 
-def group_cal(df):
+def __group_cal(df):
     """
     badic caculations on datafrmae
     :param df:
@@ -39,21 +40,21 @@ def group_cal(df):
     return df
 
 
-def group_process(data, new=None):
+def __group_process(data, new=None):
     start = timeit.default_timer()
     d1 = data
     if new is not None:
         data = pd.concat((d1, new), ignore_index=True)
     data = data.drop_duplicates()
     data.to_csv(BASIC_DATA_FILE)
-    tmp = data.groupby(BASCIC_KEY).apply(group_cal)
-    tmp = mark_single_quote(tmp)
+    tmp = data.groupby(BASCIC_KEY).apply(__group_cal)
+    tmp = __mark_single_quote(tmp)
     end = timeit.default_timer()
     print("basic group compute takes " + str(round(end - start)) + "s ")
     return tmp
 
 
-def read_csv(file):
+def __read_csv(file):
     q = pd.read_csv(file)
     q = q.drop('Unnamed: 0', axis=1)
     q.drop_duplicates(inplace=True)
@@ -74,7 +75,7 @@ def get_allDB_data():
     return data1
 
 
-def mark_all_down(all_quotes):
+def __mark_all_down(all_quotes):
     start = timeit.default_timer()
     st = all_quotes
     st.columns = OHLC_HEAD
@@ -87,7 +88,7 @@ def mark_all_down(all_quotes):
         count = count + 1
         print("process ", i)
         df = st[st.symbol == i]
-        mark_single_quote(df)
+        __mark_single_quote(df)
         if count == 1:
             all_marks = df
         else:
@@ -97,13 +98,13 @@ def mark_all_down(all_quotes):
     print("export is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
 
-def group_mean(df, column='volume', n=6):
+def __group_mean(df, column='volume', n=6):
     return df[column].rolling(n).mean()
 
 
 def find_special(data, bench):
     if data is None:
-        data = init_data_set(OUTPUT_DATA_FILE)
+        data = __init_data_set(OUTPUT_DATA_FILE)
     df = data
     df.drop_duplicates(inplace=True)
     col = [u'code', u'date']
@@ -142,20 +143,20 @@ def find_high(data, bench, atr=3):
 
 def find_long_short(data, bench):
     df = data
-    long = is_long(bench, df)
-    short = is_short(bench, df)
+    long = __is_long(bench, df)
+    short = __is_short(bench, df)
     res = pd.concat((long, short), ignore_index=True)
     print(res)
     return res
 
 
-def special_top(special):
-    top = read_csv('top.csv')
+def __special_top(special):
+    top = __read_csv('top.csv')
     spe = pd.merge(special, top, on=['code'])
     print(spe)
 
 
-def is_long(day, data):
+def __is_long(day, data):
     df = data[data['date'] == day]
     lg = df[(df.close > df.ma5) & (df.ma5 > df.ma20) & (df.ma20 > df.ma30) & (df.ma30 > df.ma51)]
     if len(lg) > 0:
@@ -164,7 +165,7 @@ def is_long(day, data):
     return None
 
 
-def is_short(day, data):
+def __is_short(day, data):
     df = data[data['date'] == day]
     lg = df[(df.close < df.ma5) & (df.ma5 < df.ma20) & (df.ma20 < df.ma30) & (df.ma30 < df.ma51)]
     if len(lg) > 0:
@@ -173,10 +174,10 @@ def is_short(day, data):
     return None
 
 
-def append_average(df, col='volume', win=6):
+def __append_average(df, col='volume', win=6):
     cols = ['code', col]
     sle = df[cols]
-    v6 = sle.groupby('code').apply(group_mean(sle[col], column=col, n=win))
+    v6 = sle.groupby('code').apply(__group_mean(sle[col], column=col, n=win))
     v6 = v6.reset_index()
     v6 = v6.set_index('level_1')
     v6.drop('code', axis=1, inplace=True)
@@ -186,7 +187,7 @@ def append_average(df, col='volume', win=6):
     return res
 
 
-def ma_cal(df):
+def __ma_cal(df):
     prc = df.close
     # ma5,ma10,ma20 are provided by tushare on default
     # df['ma5'] = prc.rolling(5).mean()
@@ -213,38 +214,41 @@ def top_industry(data, key='industry', value=None, num=3):
     when set to None, rank symbols in certain industry/area/concept
     :return:
     """
-    s3 = append_list(MIN_HEAD, [key])
-    s4 = append_list(s3, ['mark'])
+    s3 = __append_list(MIN_HEAD, [key])
+    s4 = __append_list(s3, ['mark'])
+    select = pd.DataFrame()
     if value is None:
-        marks = data[s4].groupby(s3)['mark'].sum()
+        select = data
     else:
         select = data[data[key] == value]
-        marks = select[s4].groupby(s3)['mark'].sum()
+    marks = select[s4].groupby(s3)['mark'].sum()
     marks = marks.reset_index()
     res = pd.DataFrame()
     if num is None:
         res = marks.sort_values(by='mark', ascending=0)
     else:
-        res = marks.groupby(key, group_keys=False).apply(sort_mark, num)
-    res.to_csv('top.csv')
+        res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
+    print('==============rank ' + value + '=================')
+    print(res)
+    res.to_csv('top' + '_' + value + '.csv')
     return res
 
 
-def sort_mark(df, num=3):
+def __sort_mark(df, num=3):
     res = df.sort_values(by='mark', ascending=0)
     return res[:num]
 
 
 def get_industry_data(df, source='Local', key='industry'):
     if source == 'Local':
-        finance = init_data_set(FINANCE_FILE)
+        finance = __init_data_set(FINANCE_FILE)
     else:
         finance = ts.get_stock_basics()
         finance.reset_index(inplace=True)
         finance.columns = FINANCE_HEAD
         finance[MIN_HEAD].to_csv(SYMBOL_FILE)
         finance.to_csv(FINANCE_FILE)
-    mcolumns = append_list(MIN_HEAD, [key])
+    mcolumns = __append_list(MIN_HEAD, [key])
     if key in df.columns:
         mkeys = mcolumns
     else:
@@ -253,7 +257,7 @@ def get_industry_data(df, source='Local', key='industry'):
     return data
 
 
-def get_symbol_dict(df):
+def __get_symbol_dict(df):
     df.reset_index(inplace=True)
     df['code'] = df.symbol.apply(lambda x: x[:6])
     df = df.set_index('code')
@@ -263,7 +267,7 @@ def get_symbol_dict(df):
     return dic
 
 
-def symbol_convert(x, dic):
+def __symbol_convert(x, dic):
     if x in dic:
         return dic[x]
     else:
@@ -275,22 +279,19 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
     get an industry mark rank through a stock
     symbol:string, the symbol of the code
     """
-    select = None
-    if industry_value is None or industry_value == '':
+    if industry_value is not None and industry_value != '':
+        select = industry_value
+        top_industry(data, key, select, None)
+    else:
         industry_name = data[data[BASCIC_KEY] == symbol][key].drop_duplicates()
         values = industry_name.values
         if len(values) == 0:
-            print('There is no data found for symbol '+ symbol)
+            print('There is no data found for symbol ' + symbol)
             return
-        if len(values) > 1:
-            print('attention!!! ' + symbol + "belongs to multiple " + key + ' you need to update API : rank_industry')
-        select = values[0]
-    else:
-        select = industry_value
-    if select is None:
-        print("Please identify name of symbol or industry for search")
-    else:
-        return top_industry(data, key, select, None)
+        elif isinstance(values, list) or isinstance(values, pd.Series) \
+                or isinstance(values, set) or isinstance(values, np.ndarray):
+            for value in values:
+                top_industry(data, key, value, None)
 
 
 def basics_cal(all_quotes):
@@ -313,8 +314,8 @@ def basics_cal(all_quotes):
         df['v_change'] = v.pct_change()
         prc = df.close
         df['price_change'] = prc.pct_change()
-        ma_cal(df)
-        mark_single_quote(df)
+        __ma_cal(df)
+        __mark_single_quote(df)
         if count == 1:
             all_marks = df
         else:
@@ -327,8 +328,8 @@ def basics_cal(all_quotes):
 
 def away51_top(data, bench, num=3, key='industry'):
     tops = top_industry(data, key, None, num)
-    r51 = away51(data, bench)
-    mkeys = append_list(MIN_HEAD, [key])
+    r51 = __away51(data, bench)
+    mkeys = __append_list(MIN_HEAD, [key])
     res = r51.merge(tops, on=mkeys)
     res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
     print(res)
@@ -337,24 +338,24 @@ def away51_top(data, bench, num=3, key='industry'):
     return res
 
 
-def append_list(list1, list2):
+def __append_list(list1, list2):
     return pd.concat([pd.Series(list1), pd.Series(list2)]).tolist()
 
 
-def away51(m51, date):
+def __away51(m51, date):
     r51 = m51[(m51.close < (m51.ma51 * 0.9)) & (m51.date == date)]
     # r51 = m51[((m51.close > (m51.ma51*1.1)) | (m51.close < (m51.ma51*0.9))) & (m51.date == date)]
     return r51
 
 
-def init_data_set(input_file):
+def __init_data_set(input_file):
     start = timeit.default_timer()
     try:
         data = pd.read_csv(input_file, dtype=CODE_DTYPE)
     except FileNotFoundError:
         print(input_file + ' doesn\'t exist ')
         return None
-    data = clean_data(data)
+    data = __clean_data(data)
     if 'date' in data:
         data.date = data.date.astype('str')
         data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
@@ -366,17 +367,17 @@ def init_data_set(input_file):
 
 def update_concept(key='concept'):
     con = ts.get_concept_classified()
-    con.columns = append_list(MIN_HEAD, [key])
-    finance_data = init_data_set(FINANCE_FILE)
+    # con.columns = __append_list(MIN_HEAD, [key])
+    finance_data = __init_data_set(FINANCE_FILE)
     if key in finance_data:
         finance_data.drop(key, axis=1, inplace=True)
         finance_data.drop_duplicates(inplace=True)
-    res = pd.merge(finance_data, con[['Name', key]], on='Name')
+    res = pd.merge(finance_data, con, on=MIN_HEAD)
     res.to_csv(FINANCE_FILE)
     return res
 
 
-def clean_data(data):
+def __clean_data(data):
     if 'Unnamed: 0' in data:
         data = data.drop('Unnamed: 0', axis=1)
     if 'Unnamed: 0.1' in data:
@@ -404,36 +405,35 @@ def run():
     args = option.parser.parse_args()
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     data = pd.DataFrame()
-    # args = set_test_args(args, 'high', '2018-01-11', '601009', '保险', 'industry')
+    args = set_test_args(args, 'rank', '2018-01-11', '601009', '保险', 'industry')
     if args.methods == 'basic':
         print('*****basic data processing *********')
-        data = init_data_set(BASIC_DATA_FILE)
-        new = init_data_set(crawl_file_name)
+        data = __init_data_set(BASIC_DATA_FILE)
+        new = __init_data_set(crawl_file_name)
         # basics_cal(data)
-        # mark_all_down(data)
-        data = group_process(data, new)
+        # __mark_all_down(data)
+        data = __group_process(data, new)
     elif args.methods == 'foundation':
-        data = init_data_set(OUTPUT_DATA_FILE)
+        data = __init_data_set(OUTPUT_DATA_FILE)
         data = get_industry_data(data, key=args.category)
     elif args.methods == 'finance':
         update_concept()
         return
     elif args.methods == 'report':
-        data = init_data_set(BASIC_DATA_FILE)
-        new = init_data_set(crawl_file_name)
-        data = group_process(data, new)
+        data = __init_data_set(BASIC_DATA_FILE)
+        new = __init_data_set(crawl_file_name)
+        data = __group_process(data, new)
         out = away51_top(data, args.end_date, key=args.category)
         find_special(data, args.end_date)
     if len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         return
-    data = init_data_set(OUTPUT_DATA_FILE)
-    if args.methods == 'away51':
+    data = __init_data_set(OUTPUT_DATA_FILE)
+    if args.methods == '__away51':
         out = away51_top(data, args.end_date, key=args.category)
         out.to_csv('away51top.csv')
     elif args.methods == 'rank':
-        res = rank_industry(data, args.industry, args.symbol, args.category)
-        print(res)
+        rank_industry(data, args.industry, args.symbol, args.category)
     elif args.methods == 'special':
         find_special(data, args.end_date)
     elif args.methods == 'high':

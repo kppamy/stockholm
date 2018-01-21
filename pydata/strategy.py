@@ -253,8 +253,15 @@ def get_industry_data(df, source='Local', key='industry'):
         mkeys = mcolumns
     else:
         mkeys = MIN_HEAD
-    data = pd.merge(df, finance[mcolumns], on=mkeys)
-    return data
+    data = pd.merge(df, finance[mcolumns], how='left', on=mkeys)
+    len1 = len(df[BASCIC_KEY].drop_duplicates())
+    len2 = len(data[BASCIC_KEY].drop_duplicates())
+    if len1 != len2:
+        print("!!!!!!!!!!!!!!!!!!!!data might gets lost !!!!!!!!!!!!!!  before merge: " + str(len1)
+              + " after merge: " + str(len2))
+        return None
+    else:
+        return data
 
 
 def __get_symbol_dict(df):
@@ -396,7 +403,7 @@ def set_test_args(args, method, end_date, symbol, industry, category):
     args.methods = method
     args.symbol = symbol
     args.category = category
-    args.industry = industry
+    # args.industry = industry
     args.end_date = end_date
     return args
 
@@ -405,7 +412,7 @@ def run():
     args = option.parser.parse_args()
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     data = pd.DataFrame()
-    args = set_test_args(args, 'rank', '2018-01-11', '601009', '保险', 'industry')
+    args = set_test_args(args, 'rank', '2018-01-11', '601009', '信托重仓', 'industry')
     if args.methods == 'basic':
         print('*****basic data processing *********')
         data = __init_data_set(BASIC_DATA_FILE)
@@ -425,11 +432,11 @@ def run():
         data = __group_process(data, new)
         out = away51_top(data, args.end_date, key=args.category)
         find_special(data, args.end_date)
-    if len(data) != 0:
+    if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         return
     data = __init_data_set(OUTPUT_DATA_FILE)
-    if args.methods == '__away51':
+    if args.methods == 'away51':
         out = away51_top(data, args.end_date, key=args.category)
         out.to_csv('away51top.csv')
     elif args.methods == 'rank':

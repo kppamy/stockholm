@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
+import timeit
+import pandas as pd
+
 DATEFORMAT = '%Y-%m-%d'
 OHLC_HEAD = ['date', 'open', 'high', 'low', 'close', 'volume', 'adj_close', 'symbol']
 # date head used by tushare : get_hists, get_hist_data, basic daily ticket date
@@ -49,3 +52,35 @@ def symbl2num(x):
     else:
         print("symbol format error!!!!!!!!!!!   ", x)
     return None
+
+
+def init_data_set(input_file):
+    start = timeit.default_timer()
+    try:
+        data = pd.read_csv(input_file, dtype=CODE_DTYPE)
+    except FileNotFoundError:
+        print(input_file + ' doesn\'t exist ')
+        return None
+    data = __clean_data(data)
+    if 'date' in data:
+        data.date = data.date.astype('str')
+        data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
+        data.date = pd.to_datetime(data.date)
+    end = timeit.default_timer()
+    print('********************initDataSet takes ' + str(end - start) + 's')
+    return data
+
+
+def __clean_data(data):
+    if 'Unnamed: 0' in data:
+        data = data.drop('Unnamed: 0', axis=1)
+    if 'Unnamed: 0.1' in data:
+        data = data.drop('Unnamed: 0.1', axis=1)
+    if 'Unnamed: 1' in data:
+        data = data.drop('Unnamed: 1', axis=1)
+    if 'code.1' in data:
+        data.drop('code.1', axis=1, inplace=True)
+    if 'index' in data:
+        data.drop('index', axis=1, inplace=True)
+    data.drop_duplicates(inplace=True)
+    return data

@@ -3,6 +3,7 @@ from grab import Grab
 import option
 import os
 
+
 def checkFoldPermission(path):
     if(path == 'USER_HOME/tmp/pydata_export'):
         path = os.path.expanduser('~') + '/tmp/pydata_export'
@@ -19,6 +20,8 @@ def checkFoldPermission(path):
         print(e)
         return False
     return True
+
+
 def main():
     args = option.parser.parse_args()
     if not checkFoldPermission(args.store_path):
@@ -28,6 +31,7 @@ def main():
         print('Stockholm is starting...\n')
         grab=Grab(args)
         grab.run()
+
 
 if __name__ == '__main__':
     main()

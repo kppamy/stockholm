@@ -104,7 +104,7 @@ def __group_mean(df, column='volume', n=6):
 
 def find_special(data, bench):
     if data is None:
-        data = __init_data_set(OUTPUT_DATA_FILE)
+        data = init_data_set(OUTPUT_DATA_FILE)
     df = data
     df.drop_duplicates(inplace=True)
     col = [u'code', u'date']
@@ -241,7 +241,7 @@ def __sort_mark(df, num=3):
 
 def get_industry_data(df, source='Local', key='industry'):
     if source == 'Local':
-        finance = __init_data_set(FINANCE_FILE)
+        finance = init_data_set(FINANCE_FILE)
     else:
         finance = ts.get_stock_basics()
         finance.reset_index(inplace=True)
@@ -355,27 +355,13 @@ def __away51(m51, date):
     return r51
 
 
-def __init_data_set(input_file):
-    start = timeit.default_timer()
-    try:
-        data = pd.read_csv(input_file, dtype=CODE_DTYPE)
-    except FileNotFoundError:
-        print(input_file + ' doesn\'t exist ')
-        return None
-    data = __clean_data(data)
-    if 'date' in data:
-        data.date = data.date.astype('str')
-        data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
-        data.date = pd.to_datetime(data.date)
-    end = timeit.default_timer()
-    print('********************initDataSet takes ' + str(end - start) + 's')
-    return data
+
 
 
 def update_concept(key='concept'):
     con = ts.get_concept_classified()
     # con.columns = __append_list(MIN_HEAD, [key])
-    finance_data = __init_data_set(FINANCE_FILE)
+    finance_data = init_data_set(FINANCE_FILE)
     if key in finance_data:
         finance_data.drop(key, axis=1, inplace=True)
         finance_data.drop_duplicates(inplace=True)
@@ -384,19 +370,7 @@ def update_concept(key='concept'):
     return res
 
 
-def __clean_data(data):
-    if 'Unnamed: 0' in data:
-        data = data.drop('Unnamed: 0', axis=1)
-    if 'Unnamed: 0.1' in data:
-        data = data.drop('Unnamed: 0.1', axis=1)
-    if 'Unnamed: 1' in data:
-        data = data.drop('Unnamed: 1', axis=1)
-    if 'code.1' in data:
-        data.drop('code.1', axis=1, inplace=True)
-    if 'index' in data:
-        data.drop('index', axis=1, inplace=True)
-    data.drop_duplicates(inplace=True)
-    return data
+
 
 
 def set_test_args(args, method, end_date, symbol, industry, category):
@@ -415,27 +389,27 @@ def run():
     args = set_test_args(args, 'rank', '2018-01-11', '601009', '信托重仓', 'industry')
     if args.methods == 'basic':
         print('*****basic data processing *********')
-        data = __init_data_set(BASIC_DATA_FILE)
-        new = __init_data_set(crawl_file_name)
+        data = init_data_set(BASIC_DATA_FILE)
+        new = init_data_set(crawl_file_name)
         # basics_cal(data)
         # __mark_all_down(data)
         data = __group_process(data, new)
     elif args.methods == 'foundation':
-        data = __init_data_set(OUTPUT_DATA_FILE)
+        data = init_data_set(OUTPUT_DATA_FILE)
         data = get_industry_data(data, key=args.category)
     elif args.methods == 'finance':
         update_concept()
         return
     elif args.methods == 'report':
-        data = __init_data_set(BASIC_DATA_FILE)
-        new = __init_data_set(crawl_file_name)
+        data = init_data_set(BASIC_DATA_FILE)
+        new = init_data_set(crawl_file_name)
         data = __group_process(data, new)
         out = away51_top(data, args.end_date, key=args.category)
         find_special(data, args.end_date)
     if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         return
-    data = __init_data_set(OUTPUT_DATA_FILE)
+    data = init_data_set(OUTPUT_DATA_FILE)
     if args.methods == 'away51':
         out = away51_top(data, args.end_date, key=args.category)
         out.to_csv('away51top.csv')

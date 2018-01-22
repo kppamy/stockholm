@@ -360,16 +360,13 @@ class Grab(object):
         return data
 
     def try_elim_fail(self, start_date, end_date, output_types):
-        df = pd.read_csv('fail.csv')
-        all_quotes = df.to_dict('records')
-        some_quotes = all_quotes
-        self.load_all_quote_data_yahoo(some_quotes, start_date, end_date)
-        self.data_export(some_quotes, output_types, None)
-        df = self.convert2DataFrame(self.all_quotes_data)
-        fails = pd.DataFrame(self.all_quotes_fail, columns=['symbol', 'name'])
-        if len(fails) > 0:
-            fails.to_csv('fail2.csv')
-        return df
+        df = pd.read_csv(FAIL_RECORDS_FILE)
+        df = init_data_set(FAIL_RECORDS_FILE)
+        symbls = df[BASCIC_KEY]
+        data, fail_symbls = self.load_all_quote_data_tushare(symbls, start_date, end_date)
+        print(" failed to download " + str(len(fail_symbls)) + " symbols")
+        data.to_csv('reload.csv')
+        return data
 
     def convert_allinone_dtyp(self):
         self.allinone['code'] = self.allinone['code'].astype('str')
@@ -410,7 +407,7 @@ class Grab(object):
         print("save data to DB end... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
     def data_save_one(self, quote):
-        if ('Data' in quote and 'Symbol' in quote):
+        if 'Data' in quote and 'Symbol' in quote:
             df = pd.DataFrame(quote['Data'])
             self.all_quotes_data.append(df)
             print("stock ", quote['Symbol'], " save to db")
@@ -424,11 +421,13 @@ class Grab(object):
         print("==============startdate============= ", self.start_date)
         print("==============enddate=============== ", self.end_date)
         output_types = []
-        if (self.output_type == "json"):
+        self.reload_data = 'Y'
+        self.start_date = '2017-01-11'
+        if self.output_type == "json":
             output_types.append("json")
-        elif (self.output_type == "csv"):
+        elif self.output_type == "csv":
             output_types.append("csv")
-        elif (self.output_type == "all"):
+        elif self.output_type == "all":
             output_types = ["json", "csv"]
         # res=pd.DataFrame([],columns=DATA_HEAD)
         res = pd.DataFrame()

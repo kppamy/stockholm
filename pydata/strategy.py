@@ -196,6 +196,29 @@ def __ma_cal(df):
     df['ma51'] = prc.rolling(51).mean()
 
 
+def select_dataframe_date(data, start=None, end=None):
+    gb = data.groupby(BASCIC_KEY)
+    res = gb.apply(__select_date, start, end)
+    return res
+
+
+def __select_date(data, start=None, end=None):
+    if data.index.name != 'date':
+        df = data.set_index('date')
+    else:
+        df = data
+    if end is None:
+        res = df[start:]
+    elif start is None:
+        res = df[:end]
+    else:
+        res = df[start:end]
+    if res is None:
+        print("!!!!!!!!!!!attention!!!!!!!!!!!!!!!!!!!")
+    res.reset_index(inplace=True)
+    return res
+
+
 def top_industry(data, key='industry', value=None, num=3):
     """
     Show top N symbols in each industry/area/concept
@@ -249,8 +272,10 @@ def get_industry_data(df, source='Local', key='industry'):
         finance[MIN_HEAD].to_csv(SYMBOL_FILE)
         finance.to_csv(FINANCE_FILE)
     mcolumns = __append_list(MIN_HEAD, [key])
-    if key in df.columns:
+    if key in df.columns and 'name' in df.columns:
         mkeys = mcolumns
+    elif 'name' not in df.columns:
+        mkeys = BASCIC_KEY
     else:
         mkeys = MIN_HEAD
     data = pd.merge(df, finance[mcolumns], how='left', on=mkeys)
@@ -355,9 +380,6 @@ def __away51(m51, date):
     return r51
 
 
-
-
-
 def update_concept(key='concept'):
     con = ts.get_concept_classified()
     # con.columns = __append_list(MIN_HEAD, [key])
@@ -370,14 +392,11 @@ def update_concept(key='concept'):
     return res
 
 
-
-
-
 def set_test_args(args, method, end_date, symbol, industry, category):
     args.methods = method
     args.symbol = symbol
     args.category = category
-    # args.industry = industry
+    args.industry = industry
     args.end_date = end_date
     return args
 
@@ -386,7 +405,8 @@ def run():
     args = option.parser.parse_args()
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     data = pd.DataFrame()
-    args = set_test_args(args, 'rank', '2018-01-11', '601009', '信托重仓', 'industry')
+    # args = set_test_args(args, 'rank', '2018-01-19', '601009', '化工原料', 'industry')
+    start = timeit.default_timer()
     if args.methods == 'basic':
         print('*****basic data processing *********')
         data = init_data_set(BASIC_DATA_FILE)
@@ -394,6 +414,7 @@ def run():
         # basics_cal(data)
         # __mark_all_down(data)
         data = __group_process(data, new)
+        data = get_industry_data(data, key=args.category)
     elif args.methods == 'foundation':
         data = init_data_set(OUTPUT_DATA_FILE)
         data = get_industry_data(data, key=args.category)
@@ -408,6 +429,7 @@ def run():
         find_special(data, args.end_date)
     if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
+        print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
         return
     data = init_data_set(OUTPUT_DATA_FILE)
     if args.methods == 'away51':

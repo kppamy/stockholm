@@ -6,6 +6,7 @@ import pandas as pd
 import tushare as ts
 from const import *
 import numpy as np
+from datetime import datetime
 
 
 def __mark_single_quote(quote):
@@ -251,9 +252,13 @@ def top_industry(data, key='industry', value=None, num=3):
         res = marks.sort_values(by='mark', ascending=0)
     else:
         res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
-    print('==============rank ' + value + '=================')
+    if value is None:
+        print('==============rank all industry=================')
+        res.to_csv('topall.csv')
+    else:
+        print('==============rank ' + value + '=================')
+        res.to_csv('top' + '_' + value + '.csv')
     print(res)
-    res.to_csv('top' + '_' + value + '.csv')
     return res
 
 
@@ -264,13 +269,13 @@ def __sort_mark(df, num=3):
 
 def get_industry_data(df, source='Local', key='industry'):
     if source == 'Local':
-        finance = init_data_set(FINANCE_FILE)
+        finance = init_data_set(FOUNDAMENTAL_FILE)
     else:
         finance = ts.get_stock_basics()
         finance.reset_index(inplace=True)
         finance.columns = FINANCE_HEAD
         finance[MIN_HEAD].to_csv(SYMBOL_FILE)
-        finance.to_csv(FINANCE_FILE)
+        finance.to_csv(FOUNDAMENTAL_FILE)
     mcolumns = __append_list(MIN_HEAD, [key])
     if key in df.columns and 'name' in df.columns:
         mkeys = mcolumns
@@ -324,6 +329,26 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
                 or isinstance(values, set) or isinstance(values, np.ndarray):
             for value in values:
                 top_industry(data, key, value, None)
+
+
+def get_finance_reports(years=1):
+    reports = init_data_set(FINANCE_REPORTS_FILE)
+    thisyear = datetime.today().year
+    for i in range(years):
+        year = thisyear - i
+        for quarter in range(4):
+            try:
+                data = ts.get_report_data(year, quarter + 1)
+                data['period'] = str(year) + str(0) + str(quarter+1)
+                reports = reports.append(data)
+            except IOError:
+                print(" Network expection year: " + str(year) + " quarter: " + str(quarter+1))
+                continue
+    if len(reports) > 0:
+        reports = reports.sort_values(by=['code', 'period'], ascending=False)
+        reports.drop_duplicates(inplace=True)
+        reports.to_csv(FINANCE_REPORTS_FILE)
+    return reports
 
 
 def basics_cal(all_quotes):
@@ -383,29 +408,30 @@ def __away51(m51, date):
 def update_concept(key='concept'):
     con = ts.get_concept_classified()
     # con.columns = __append_list(MIN_HEAD, [key])
-    finance_data = init_data_set(FINANCE_FILE)
+    finance_data = init_data_set(FOUNDAMENTAL_FILE)
     if key in finance_data:
         finance_data.drop(key, axis=1, inplace=True)
         finance_data.drop_duplicates(inplace=True)
     res = pd.merge(finance_data, con, on=MIN_HEAD)
-    res.to_csv(FINANCE_FILE)
+    res.to_csv(FOUNDAMENTAL_FILE)
     return res
 
 
-def set_test_args(args, method, end_date, symbol, industry, category):
+def set_test_args(args, method, start_date, end_date, symbol, industry, category):
     args.methods = method
     args.symbol = symbol
     args.category = category
     args.industry = industry
     args.end_date = end_date
+    args.start_date = start_date
     return args
 
 
 def run():
     args = option.parser.parse_args()
-    crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     data = pd.DataFrame()
-    # args = set_test_args(args, 'rank', '2018-01-19', '601009', '化工原料', 'industry')
+    # args = set_test_args(args, 'finance', '2018-01-20', '2018-01-26', '601009', '房地产', 'industry')
+    crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
         print('*****basic data processing *********')
@@ -419,6 +445,9 @@ def run():
         data = init_data_set(OUTPUT_DATA_FILE)
         data = get_industry_data(data, key=args.category)
     elif args.methods == 'finance':
+        get_finance_reports()
+        return
+    elif args.methods == 'concept':
         update_concept()
         return
     elif args.methods == 'report':

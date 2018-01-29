@@ -16,10 +16,11 @@ MIN_HEAD = ['code', 'name']
 CODE_DTYPE = {'code': 'str'}
 BASCIC_KEY = 'code'
 BASIC_DATA_FILE = 'basic.csv'
-FINANCE_FILE = 'finance.csv'
+FOUNDAMENTAL_FILE = 'fundamental.csv'
 OUTPUT_DATA_FILE = 'data.csv'
 SYMBOL_FILE = 'allsymbols.csv'
 FAIL_RECORDS_FILE = 'fail.csv'
+FINANCE_REPORTS_FILE = 'reports.csv'
 
 
 def num2symbl(x):

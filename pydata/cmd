@@ -3,3 +3,4 @@ p3 strategy.py --methods=rank --industry 银行 --category industry
 p3 strategy.py --methods=away51 --enddate 2018-01-11 --category industry
 p3 strategy.py --methods=special --enddate 2018-01-11 
 p3 strategy.py --methods=high --enddate 2018-01-11 
+p3 strategy.py --methods=finance

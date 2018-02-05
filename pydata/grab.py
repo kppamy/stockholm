@@ -347,7 +347,8 @@ class Grab(object):
 
     def data_load_tushare(self, start_date, end_date):
         df = pd.read_csv(SYMBOL_FILE)
-        symbls = df.Symbol.apply(symbl2num)
+        df = init_data_set(SYMBOL_FILE)
+        symbls = df.code.drop_duplicates()
         data = pd.DataFrame()
         retry = pd.DataFrame()
         fail_symbls = []

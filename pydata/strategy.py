@@ -41,7 +41,7 @@ def __group_cal(df):
     return df
 
 
-def __group_process(data, new=None):
+def group_process(data, new=None):
     start = timeit.default_timer()
     d1 = data
     if new is not None:
@@ -103,7 +103,17 @@ def __group_mean(df, column='volume', n=6):
     return df[column].rolling(n).mean()
 
 
-def find_special(data, bench):
+def find_special(data, bench, key):
+    tops = top_industry(data, key, None, 3)
+    fluc = find_fluctuate(data, bench)
+    keys = __append_list(MIN_HEAD, [key, 'mark'])
+    special = pd.merge(tops, fluc, on=keys)
+    special.drop_duplicates(inplace=True)
+    print("*********************************what's special today:\n", special)
+    return special
+
+
+def find_fluctuate(data, bench):
     if data is None:
         data = init_data_set(OUTPUT_DATA_FILE)
     df = data
@@ -113,19 +123,17 @@ def find_special(data, bench):
     ab['reason'] = '+_8%'
     vh = df[df.volume > (df.v6 * 3)][col]
     vh['reason'] = 'volume doubles'
-    ah = df[(df.price_chg_aggr > 0.15)][col]
-    ah['reason'] = 'aggregate change more than +15%'
-    ah2 = df[(df.price_chg_aggr < -0.1)][col]
-    ah2['reason'] = 'aggregate change more than -15%'
+    ah = df[(df.price_chg_aggr > 0.15) | (df.price_chg_aggr < -0.15)][col]
+    ah['reason'] = 'aggregate change more than +_15%'
     # ah4 = df[((df['max']-df.close)/df['max'])< 0.1)][col]
     # ah4['reason'] = 'no more than 10% away from max'
-    res = pd.concat((ab, vh, ah, ah2), ignore_index=True)
+    res = pd.concat((ab, vh, ah), ignore_index=True)
     # res.set_index('date',inplace = True)
     today = res[res.date == bench]
     top = top_industry(data, 'industry', None)
     res = today.merge(top, on='code')
+    res.drop_duplicates(subset=MIN_HEAD,inplace=True)
     today = res
-    print("*********************************what's special today:\n", today)
     return today
 
 
@@ -284,6 +292,7 @@ def get_industry_data(df, source='Local', key='industry'):
     else:
         mkeys = MIN_HEAD
     data = pd.merge(df, finance[mcolumns], how='left', on=mkeys)
+    data.drop_duplicates(inplace=True)
     len1 = len(df[BASCIC_KEY].drop_duplicates())
     len2 = len(data[BASCIC_KEY].drop_duplicates())
     if len1 != len2:
@@ -319,6 +328,8 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
     if industry_value is not None and industry_value != '':
         select = industry_value
         top_industry(data, key, select, None)
+    elif symbol is None or symbol == '':
+        top_industry(data, key)
     else:
         industry_name = data[data[BASCIC_KEY] == symbol][key].drop_duplicates()
         values = industry_name.values
@@ -419,9 +430,9 @@ def update_concept(key='concept'):
 
 def set_test_args(args, method, start_date, end_date, symbol, industry, category):
     args.methods = method
-    args.symbol = symbol
+    # args.symbol = symbol
     args.category = category
-    args.industry = industry
+    # args.industry = industry
     args.end_date = end_date
     args.start_date = start_date
     return args
@@ -430,7 +441,7 @@ def set_test_args(args, method, start_date, end_date, symbol, industry, category
 def run():
     args = option.parser.parse_args()
     data = pd.DataFrame()
-    # args = set_test_args(args, 'finance', '2018-01-20', '2018-01-26', '601009', '房地产', 'industry')
+    # args = set_test_args(args, 'special', '2018-01-20', '2018-02-06', '601009', '化工', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
@@ -439,7 +450,7 @@ def run():
         new = init_data_set(crawl_file_name)
         # basics_cal(data)
         # __mark_all_down(data)
-        data = __group_process(data, new)
+        data = group_process(data, new)
         data = get_industry_data(data, key=args.category)
     elif args.methods == 'foundation':
         data = init_data_set(OUTPUT_DATA_FILE)
@@ -453,9 +464,9 @@ def run():
     elif args.methods == 'report':
         data = init_data_set(BASIC_DATA_FILE)
         new = init_data_set(crawl_file_name)
-        data = __group_process(data, new)
+        data = group_process(data, new)
         out = away51_top(data, args.end_date, key=args.category)
-        find_special(data, args.end_date)
+        find_special(data, args.end_date, key=args.category)
     if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
@@ -467,7 +478,7 @@ def run():
     elif args.methods == 'rank':
         rank_industry(data, args.industry, args.symbol, args.category)
     elif args.methods == 'special':
-        find_special(data, args.end_date)
+        find_special(data, args.end_date, key=args.category)
     elif args.methods == 'high':
         find_high(data, args.end_date)
         find_long_short(data, args.end_date)

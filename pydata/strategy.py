@@ -106,8 +106,7 @@ def __group_mean(df, column='volume', n=6):
 def find_special(data, bench, key):
     tops = top_industry(data, key, None, 3)
     fluc = find_fluctuate(data, bench)
-    keys = __append_list(MIN_HEAD, [key, 'mark'])
-    special = pd.merge(tops, fluc, on=keys)
+    special = pd.merge(tops[[BASCIC_KEY, 'mark']], fluc[[BASCIC_KEY, 'reason']], on=BASCIC_KEY)
     special.drop_duplicates(inplace=True)
     print("*********************************what's special today:\n", special)
     return special
@@ -116,46 +115,57 @@ def find_special(data, bench, key):
 def find_fluctuate(data, bench):
     if data is None:
         data = init_data_set(OUTPUT_DATA_FILE)
-    df = data
+    df = data[data.date == bench]
     df.drop_duplicates(inplace=True)
     col = [u'code', u'date']
-    ab = df[(df.price_change > 0.08) | (df.price_change < -0.08)][col]
+    ab = df[(df.price_change > 8) | (df.price_change < -8)][col]
     ab['reason'] = '+_8%'
     vh = df[df.volume > (df.v6 * 3)][col]
     vh['reason'] = 'volume doubles'
-    ah = df[(df.price_chg_aggr > 0.15) | (df.price_chg_aggr < -0.15)][col]
-    ah['reason'] = 'aggregate change more than +_15%'
-    # ah4 = df[((df['max']-df.close)/df['max'])< 0.1)][col]
+    ah = df[(df.price_chg_aggr > 15) | (df.price_chg_aggr < -15)][col]
+    ah['reason'] = 'aggregate > +_15%'
+    # ah4 = df[(((df['max']-df.close)/df['max']) < 1)][col]
     # ah4['reason'] = 'no more than 10% away from max'
     res = pd.concat((ab, vh, ah), ignore_index=True)
     # res.set_index('date',inplace = True)
-    today = res[res.date == bench]
-    top = top_industry(data, 'industry', None)
-    res = today.merge(top, on='code')
-    res.drop_duplicates(subset=MIN_HEAD,inplace=True)
-    today = res
+    res.drop_duplicates(inplace=True)
+    today = res.groupby(BASCIC_KEY).apply(_concat_column, key='reason')
     return today
 
 
+def _concat_column(df, key):
+    if key in df:
+        value = str()
+        for item in df[key]:
+            if not isinstance(item, str):
+                # print('!!!!!!!!!!!!!!!!!! ' + df[BASCIC_KEY] + ' '
+                #       + key + ' is not string')
+                continue
+            value = value + ' , ' + item
+        df[key] = value
+        df.drop_duplicates(inplace=True)
+    return df
+
+
 def find_high(data, bench, atr=3):
-    df = data
+    df = data[data.date == bench]
     col = [u'code', u'date']
-    ah3 = df[((df['max'] - df.close) / df['max']) < (atr / 100)][col]
-    ah3['reason'] = 'no more than ' + str(atr) + '% away from max'
+    high = df[((df['max'] - df.close) / df['max']) < (atr / 100)][col]
+    high['reason'] = 'no more than ' + str(atr) + '% away from max'
     top = top_industry(data, 'industry', None)
-    today = ah3[ah3.date == bench]
-    res = today.merge(top, on='code')
+    res = high.merge(top[[BASCIC_KEY]], on=BASCIC_KEY)
     print('*************************climb**************************')
-    print(res)
+    print(res.head())
     return res
 
 
 def find_long_short(data, bench):
-    df = data
+    df = data[data.date == bench]
     long = __is_long(bench, df)
-    short = __is_short(bench, df)
-    res = pd.concat((long, short), ignore_index=True)
-    print(res)
+    # short = __is_short(bench, df)
+    # res = pd.concat((long, short), ignore_index=True)
+    res = long
+    print(res.head())
     return res
 
 
@@ -168,6 +178,8 @@ def __special_top(special):
 def __is_long(day, data):
     df = data[data['date'] == day]
     lg = df[(df.close > df.ma5) & (df.ma5 > df.ma20) & (df.ma20 > df.ma30) & (df.ma30 > df.ma51)]
+    lg = lg[[BASCIC_KEY, 'industry']]
+    lg = lg.groupby(BASCIC_KEY).apply(_concat_column, 'industry')
     if len(lg) > 0:
         lg.loc[:, 'reason'] = 'long array'
         return lg
@@ -176,10 +188,12 @@ def __is_long(day, data):
 
 def __is_short(day, data):
     df = data[data['date'] == day]
-    lg = df[(df.close < df.ma5) & (df.ma5 < df.ma20) & (df.ma20 < df.ma30) & (df.ma30 < df.ma51)]
-    if len(lg) > 0:
-        lg.loc[:, 'reason'] = 'short array'
-        return lg
+    st = df[(df.close < df.ma5) & (df.ma5 < df.ma20) & (df.ma20 < df.ma30) & (df.ma30 < df.ma51)]
+    st = st[[BASCIC_KEY, 'industry']]
+    st = st.groupby(BASCIC_KEY).apply(_concat_column, 'industry')
+    if len(st) > 0:
+        st.loc[:, 'reason'] = 'short array'
+        return st
     return None
 
 
@@ -441,7 +455,7 @@ def set_test_args(args, method, start_date, end_date, symbol, industry, category
 def run():
     args = option.parser.parse_args()
     data = pd.DataFrame()
-    # args = set_test_args(args, 'special', '2018-01-20', '2018-02-06', '601009', '化工', 'industry')
+    # args = set_test_args(args, 'high', '2018-01-20', '2018-02-06', '601009', '化工', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':

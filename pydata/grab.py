@@ -37,7 +37,7 @@ class Grab(object):
         self.end_date = args.end_date
         ## portfolio generating target date
         self.target_date = args.target_date
-        self.CRAWL_FILE_NAME = 'crawl' + self.start_date.replace('-', '') + '_' + self.end_date.replace('-', '') + '.csv'
+
         ## thread number
         self.thread = args.thread
         ## data file store path
@@ -346,7 +346,6 @@ class Grab(object):
         return df
 
     def data_load_tushare(self, start_date, end_date):
-        df = pd.read_csv(SYMBOL_FILE)
         df = init_data_set(SYMBOL_FILE)
         symbls = df.code.drop_duplicates()
         data = pd.DataFrame()
@@ -357,16 +356,19 @@ class Grab(object):
             retry, fail_symbls = self.load_all_quote_data_tushare(fail_symbls, start_date, end_date)
             data.append(retry)
         print(" failed to download " + str(len(fail_symbls)) + " symbols")
-        fail_symbls.to_csv(FAIL_RECORDS_FILE)
+        # pd.Series(fail_symbls).to_csv(FAIL_RECORDS_FILE)
+        fails = pd.DataFrame(fail_symbls, columns=[BASCIC_KEY])
+        fails.to_csv(FAIL_RECORDS_FILE)
         return data
 
     def try_elim_fail(self, start_date, end_date, output_types):
-        df = pd.read_csv(FAIL_RECORDS_FILE)
         df = init_data_set(FAIL_RECORDS_FILE)
         symbls = df[BASCIC_KEY]
+        data = pd.DataFrame()
+        fail_symbls = []
         data, fail_symbls = self.load_all_quote_data_tushare(symbls, start_date, end_date)
         print(" failed to download " + str(len(fail_symbls)) + " symbols")
-        data.to_csv('reload.csv')
+        # data.to_csv('reload.csv')
         return data
 
     def convert_allinone_dtyp(self):
@@ -419,11 +421,12 @@ class Grab(object):
     def run(self):
         ## output types
         start = timeit.default_timer()
+        output_types = []
+        self.start_date = get_last_query_date()
+        self.end_date = get_last_work_day(self.end_date)
         print("==============startdate============= ", self.start_date)
         print("==============enddate=============== ", self.end_date)
-        output_types = []
-        self.reload_data = 'Y'
-        self.start_date = '2017-01-11'
+        today_file = 'crawl' + self.start_date.replace('-', '') + '_' + self.end_date.replace('-', '') + '.csv'
         if self.output_type == "json":
             output_types.append("json")
         elif self.output_type == "csv":
@@ -445,11 +448,16 @@ class Grab(object):
             return
         if self.reload_data == 'Y':
             f = self.try_elim_fail(self.start_date, self.end_date, output_types)
-            q = pd.DataFrame.from_csv(self.CRAWL_FILE_NAME)
+            q = pd.DataFrame.from_csv(today_file)
             res = pd.concat((q, f), ignore_index=True)
             res.drop_duplicates(inplace=True)
         if res is not None:
-            res.to_csv(self.CRAWL_FILE_NAME)
+            res.to_csv(today_file)
         else:
             print("!!!!!!!!!!!!!!!!!!!!!result is nulll!!!!!!!!!!!!!!!!")
         print("Grab finish in:  " + str(round(timeit.default_timer() - start)) + "s" + "\n")
+
+
+if __name__ == '__main__':
+    args = option.parser.parse_args()
+    Grab(args).run()

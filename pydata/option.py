@@ -8,7 +8,7 @@ def get_date_str(offset):
     return date_str
 
 _default = dict(
-    reload_data = 'N',
+    reload_data = 'Y',
     gen_portfolio = 'N',
     output_type = 'csv',
     charset = 'utf-8',
@@ -21,7 +21,7 @@ _default = dict(
     testfile_path = './portfolio_test.txt',
     db_name = 'stockholm',
     methods = '',
-    update='N',
+    update='Y',
     queryDB='N',
     updateone='N',
     symbol='',

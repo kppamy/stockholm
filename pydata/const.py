@@ -2,6 +2,8 @@
 # coding=utf-8
 import timeit
 import pandas as pd
+from pandas.tseries.offsets import *
+from datetime import datetime
 
 DATEFORMAT = '%Y-%m-%d'
 OHLC_HEAD = ['date', 'open', 'high', 'low', 'close', 'volume', 'adj_close', 'symbol']
@@ -70,6 +72,31 @@ def init_data_set(input_file):
     end = timeit.default_timer()
     print('********************initDataSet takes ' + str(end - start) + 's')
     return data
+
+
+def get_last_query_date():
+    data = init_data_set(BASIC_DATA_FILE)
+    pa = data.date.sort_values()
+    last = pa.values[-1]
+    last = str(last)[:10]
+    print("latest query date: " + last)
+    return last
+
+
+def get_last_work_day(day):
+    """
+    :param day:  target date, str type
+    :return:
+    the last work day of input day
+    """
+    anchor = datetime.strptime(day, DATEFORMAT)
+    now = anchor.isoweekday()
+    if now > 4:
+        off = now - 5
+        target = anchor - DateOffset(months=0, days=off)
+        return target.strftime(DATEFORMAT)
+    else:
+        return day
 
 
 def __clean_data(data):

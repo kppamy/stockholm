@@ -280,7 +280,6 @@ def top_industry(data, key='industry', value=None, num=3):
     else:
         print('==============rank ' + value + '=================')
         res.to_csv('top' + '_' + value + '.csv')
-    print(res)
     return res
 
 
@@ -442,6 +441,12 @@ def update_concept(key='concept'):
     return res
 
 
+def slice_nan(data, key):
+    sub0 = data[data[key].isnull()]
+    sub0.drop_duplicates(subset=BASCIC_KEY)
+    return sub0
+
+
 def set_test_args(args, method, start_date, end_date, symbol, industry, category):
     args.methods = method
     # args.symbol = symbol
@@ -455,17 +460,16 @@ def set_test_args(args, method, start_date, end_date, symbol, industry, category
 def run():
     args = option.parser.parse_args()
     data = pd.DataFrame()
-    # args = set_test_args(args, 'high', '2018-01-20', '2018-02-06', '601009', '化工', 'industry')
+    args.start_date = get_last_query_date();
+    args.end_date = get_last_work_day(args.end_date)
+    # args = set_test_args(args, 'high', args.start_date, args.end_date, '601009', '化工', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
         print('*****basic data processing *********')
         data = init_data_set(BASIC_DATA_FILE)
         new = init_data_set(crawl_file_name)
-        # basics_cal(data)
-        # __mark_all_down(data)
         data = group_process(data, new)
-        data = get_industry_data(data, key=args.category)
     elif args.methods == 'foundation':
         data = init_data_set(OUTPUT_DATA_FILE)
         data = get_industry_data(data, key=args.category)
@@ -479,13 +483,15 @@ def run():
         data = init_data_set(BASIC_DATA_FILE)
         new = init_data_set(crawl_file_name)
         data = group_process(data, new)
-        out = away51_top(data, args.end_date, key=args.category)
-        find_special(data, args.end_date, key=args.category)
+        detail = get_industry_data(data, key=args.category)
+        out = away51_top(detail, args.end_date, key=args.category)
+        find_special(detail, args.end_date, key=args.category)
     if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
         return
     data = init_data_set(OUTPUT_DATA_FILE)
+    data = get_industry_data(data, key=args.category)
     if args.methods == 'away51':
         out = away51_top(data, args.end_date, key=args.category)
         out.to_csv('away51top.csv')

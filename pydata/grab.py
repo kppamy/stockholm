@@ -437,6 +437,8 @@ class Grab(object):
         res = pd.DataFrame()
         if self.update == 'Y':
             res = self.data_load_tushare(self.start_date, self.end_date)
+            if res is not None:
+                res.to_csv(today_file)
         elif self.updateone == 'all':
             res = self.get_whole_quote_hist(self.symbol)
             res.to_csv(symbl2num(self.symbol) + '.csv')

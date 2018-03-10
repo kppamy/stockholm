@@ -154,8 +154,9 @@ def find_high(data, bench, atr=3):
     high['reason'] = 'no more than ' + str(atr) + '% away from max'
     top = top_industry(data, 'industry', None)
     res = high.merge(top[[BASCIC_KEY]], on=BASCIC_KEY)
-    print('*************************climb**************************')
-    print(res.head())
+    res.drop_duplicates(inplace=True)
+    print('\n\n************************* high   totals = ', str(len(res)),   '**************************')
+    print(res)
     return res
 
 
@@ -165,7 +166,8 @@ def find_long_short(data, bench):
     # short = __is_short(bench, df)
     # res = pd.concat((long, short), ignore_index=True)
     res = long
-    print(res.head())
+    print('\n\n************************* long   totals = ',  len(res), '**************************')
+    print(res)
     return res
 
 
@@ -462,14 +464,11 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'high', args.start_date, args.end_date, '601009', '化工', 'industry')
+    # args = set_test_args(args, 'analysis', args.start_date, '2018-03-08', '601009', '化工', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
-        print('*****basic data processing *********')
-        data = init_data_set(BASIC_DATA_FILE)
-        new = init_data_set(crawl_file_name)
-        data = group_process(data, new)
+        data = update_basics(crawl_file_name)
     elif args.methods == 'foundation':
         data = init_data_set(OUTPUT_DATA_FILE)
         data = get_industry_data(data, key=args.category)
@@ -483,9 +482,7 @@ def run():
         data = init_data_set(BASIC_DATA_FILE)
         new = init_data_set(crawl_file_name)
         data = group_process(data, new)
-        detail = get_industry_data(data, key=args.category)
-        out = away51_top(detail, args.end_date, key=args.category)
-        find_special(detail, args.end_date, key=args.category)
+        data = get_today_analysis(data, args.end_date, args.category)
     if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
@@ -500,9 +497,46 @@ def run():
     elif args.methods == 'special':
         find_special(data, args.end_date, key=args.category)
     elif args.methods == 'high':
-        find_high(data, args.end_date)
-        find_long_short(data, args.end_date)
+        high_long_short(data, args.end_date)
+    elif args.methods == 'analysis':
+        data = get_today_analysis(data, args.end_date, args.category)
 
+
+def high_long_short(data, end_date):
+    high = find_high(data, end_date)
+    ls = find_long_short(data, end_date)
+    if ls is not None:
+        # ls.index.names = ['index1', 'index2']
+        both = high.merge(pd.DataFrame(ls[BASCIC_KEY]), on=BASCIC_KEY)
+        print('\n\n************************* high & long  totals = ', len(both), '**************************')
+        print(both)
+        return both
+    return high
+
+
+def get_today_analysis(data, end_date, category ):
+    detail = get_industry_data(data, key=category)
+    out = away51_top(detail, end_date, key=category)
+    special = find_special(detail, end_date, key=category)
+    spe51 = pd.DataFrame()
+    if special is not None:
+        spe51 = out.merge(pd.DataFrame(special[BASCIC_KEY]), on=BASCIC_KEY)
+    hls = high_long_short(data, end_date)
+    if len(spe51) > 0:
+        res = hls.merge(pd.DataFrame(spe51[BASCIC_KEY]), on=BASCIC_KEY)
+        print('\n\n************************* away51 & special & high & long  totals = ', len(res),
+              '**************************')
+        print(res)
+        return res
+    return hls
+
+
+def update_basics(crawl_file):
+    print('*****basic data processing *********')
+    data = init_data_set(BASIC_DATA_FILE)
+    new = init_data_set(crawl_file)
+    data = group_process(data, new)
+    return data
 
 if __name__ == '__main__':
     run()

@@ -65,11 +65,7 @@ def init_data_set(input_file):
     except FileNotFoundError:
         print(input_file + ' doesn\'t exist ')
         return None
-    data = __clean_data(data)
-    if 'date' in data:
-        data.date = data.date.astype('str')
-        data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
-        data.date = pd.to_datetime(data.date)
+    data = clean_data(data)
     end = timeit.default_timer()
     print('********************initDataSet takes ' + str(end - start) + 's')
     return data
@@ -100,7 +96,7 @@ def get_last_work_day(day):
         return day
 
 
-def __clean_data(data):
+def clean_data(data):
     if 'Unnamed: 0' in data:
         data = data.drop('Unnamed: 0', axis=1)
     if 'Unnamed: 0.1' in data:
@@ -112,4 +108,8 @@ def __clean_data(data):
     if 'index' in data:
         data.drop('index', axis=1, inplace=True)
     data.drop_duplicates(inplace=True)
+    if 'date' in data:
+        data.date = data.date.astype('str')
+        data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
+        data.date = pd.to_datetime(data.date)
     return data

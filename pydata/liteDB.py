@@ -16,6 +16,7 @@ import os
 import timeit
 from sqlalchemy import create_engine
 import pandas as pd
+from const import *
 '''SQLite数据库是一款非常小巧的嵌入式开源数据库软件，也就是说
 没有独立的维护进程，所有的维护都来自于程序本身。
 在python中，使用sqlite3创建数据库的连接，当我们指定的数据库文件不存在的时候
@@ -293,28 +294,39 @@ def fetchall_test(table):
 
 ''' date format : 2011-07-01'''
 def fetchOnePD(table,start_date=None,end_date=None):
-    stocks=pd.read_sql("SELECT * FROM '"+table+"'  WHERE date BETWEEN strftime('"+DATETIME_FORMAT+"','"+start_date+ "') AND strftime('"+DATETIME_FORMAT+"','"+end_date+"')  ",dbConnPD)
+    if start_date is None:
+        min = pd.read_sql("SELECT MIN(Date) FROM '" + table + "' ", dbConnPD)
+        start_date = min.iloc[0].values[0]
+    if end_date is None:
+        max = pd.read_sql("SELECT MAX(Date) FROM '" + table + "' ", dbConnPD)
+        end_date = max.iloc[0].values[0]
+    stocks = pd.read_sql("SELECT * FROM '"+table+"'  WHERE date BETWEEN strftime('"+DATETIME_FORMAT+"','" + start_date
+                         + "')" " AND strftime('"+DATETIME_FORMAT+"','"+end_date+"')  ", dbConnPD)
     return stocks
 
-''' date format : 2011-07-01'''
-def fetchallPD(start_date,end_date):
+
+
+def fetchallPD(start_date, end_date):
+    ''' date format : 2011-07-01
+    '''
     print("start fetch all quote data from DB: "+start_date+"  ---------  "+end_date)
     start = timeit.default_timer()
-    tables=pd.read_sql('Select name FROM sqlite_master where type="table"',dbConnPD)
-    symbols=tables.name
-    fil=[x for x in symbols if x[-3]=='.']
+    tables = pd.read_sql('Select name FROM sqlite_master where type="table"',dbConnPD)
+    symbols = tables.name
+    fil = [x for x in symbols if x[-3] =='.']
     count=1
     for x in fil:
-        if(count ==1 ):
-            df=fetchOnePD(x,start_date,end_date)
+        if count == 1:
+            df = fetchOnePD(x,start_date,end_date)
         else:
-            tmp=fetchOnePD(x,start_date,end_date)
-            df=df.append(tmp,ignore_index=True)
-        count=count+1
+            tmp = fetchOnePD(x,start_date,end_date)
+            df = df.append(tmp,ignore_index=True)
+        count = count+1
         print("fetch " + x + " from DB")
     print("fetch "+ str(count) +" quotes from DB")
     print("fetch DB is complete... time cost: " + str(round(timeit.default_timer() - start)) + "s" + "\n")
     return df 
+
 
 def fetchone_test():
     '''查询一条数据...'''
@@ -323,6 +335,7 @@ def fetchone_test():
     data = 1
     conn = get_conn(DB_FILE_PATH)
     fetchone(conn, fetchone_sql, data)
+
 
 def update_test():
     '''更新数据...'''
@@ -335,6 +348,7 @@ def update_test():
     conn = get_conn(DB_FILE_PATH)
     update(conn, update_sql, data)
 
+
 def delete_test(table):
     '''删除数据...'''
     print('删除数据...')
@@ -346,6 +360,7 @@ def delete_test(table):
 ###############################################################
 ####            测试操作     END
 ###############################################################
+
 
 def init():
     '''初始化方法'''
@@ -375,19 +390,24 @@ def init():
     global dbConnPD
     dbConnPD=enginePD.connect()
 
+
 def main(args):
-   init()
-   if args.queryDB == 'Y':
-       df=fetchallPD(args.start_date,args.end_date)
-       df.to_csv('query.csv')
-   #fetchall_test(TABLE_NAME)
-   #print('#' * 50)
-   #fetchone_test()
-   #print('#' * 50)
-   #update_test()
-   #print('#' * 50)
-   #delete_test(TABLE_NAME)
-   #fetchall_test()
+    init()
+    data = fetchOnePD('300003.SZ')
+    data.columns = data.columns.str.lower()
+    data = clean_data(data)
+    if args.queryDB == 'Y':
+        df = fetchallPD(args.start_date, args.end_date)
+        df.to_csv('query.csv')
+    #fetchall_test(TABLE_NAME)
+    #print('#' * 50)
+    #fetchone_test()
+    #print('#' * 50)
+    #update_test()
+    #print('#' * 50)
+    #delete_test(TABLE_NAME)
+    #fetchall_test()
+
 
 if __name__ == '__main__':
-    main()
+    main(None)

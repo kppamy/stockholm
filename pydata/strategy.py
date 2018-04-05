@@ -106,10 +106,14 @@ def __group_mean(df, column='volume', n=6):
 def find_special(data, bench, key):
     tops = top_industry(data, key, None, 3)
     fluc = find_fluctuate(data, bench)
-    special = pd.merge(tops[[BASCIC_KEY, 'mark']], fluc[[BASCIC_KEY, 'reason']], on=BASCIC_KEY)
-    special.drop_duplicates(inplace=True)
-    print("*********************************what's special today:\n", special)
-    return special
+    if len(fluc) == 0:
+        print("****************Every thing is smooth today***************\n")
+        return tops
+    else:
+        special = pd.merge(tops[[BASCIC_KEY, 'mark']], fluc[[BASCIC_KEY, 'reason']], on=BASCIC_KEY)
+        special.drop_duplicates(inplace=True)
+        print("*********************************what's special today:\n", special)
+        return special
 
 
 def find_fluctuate(data, bench):
@@ -118,8 +122,8 @@ def find_fluctuate(data, bench):
     df = data[data.date == bench]
     df.drop_duplicates(inplace=True)
     col = [u'code', u'date']
-    ab = df[(df.price_change > 8) | (df.price_change < -8)][col]
-    ab['reason'] = '+_8%'
+    ab = df[(df.price_change > 6) | (df.price_change < -6)][col]
+    ab['reason'] = '+_6%'
     vh = df[df.volume > (df.v6 * 3)][col]
     vh['reason'] = 'volume doubles'
     ah = df[(df.price_chg_aggr > 15) | (df.price_chg_aggr < -15)][col]
@@ -163,12 +167,14 @@ def find_high(data, bench, atr=3):
 def find_long_short(data, bench):
     df = data[data.date == bench]
     long = __is_long(bench, df)
-    # short = __is_short(bench, df)
-    # res = pd.concat((long, short), ignore_index=True)
-    res = long
-    print('\n\n************************* long   totals = ',  len(res), '**************************')
-    print(res)
-    return res
+    short = __is_short(bench, df)
+    if long is None and short is None:
+        print('\n\n*************************No long*short  array**************************')
+    else:
+        res = pd.concat((long, short), ignore_index=True)
+        print('\n\n************************* long short  totals = ',  len(res), '**************************')
+        print(res)
+        return res
 
 
 def __special_top(special):
@@ -272,14 +278,12 @@ def top_industry(data, key='industry', value=None, num=3):
     marks = select[s4].groupby(s3)['mark'].sum()
     marks = marks.reset_index()
     res = pd.DataFrame()
-    if num is None:
-        res = marks.sort_values(by='mark', ascending=0)
-    else:
-        res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
     if value is None:
-        print('==============rank all industry=================')
+        res = marks.sort_values(by='mark', ascending=0)
+        print('==============rank all industry===============' , res.head())
         res.to_csv('topall.csv')
     else:
+        res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
         print('==============rank ' + value + '=================')
         res.to_csv('top' + '_' + value + '.csv')
     return res
@@ -415,7 +419,10 @@ def away51_top(data, bench, num=3, key='industry'):
     mkeys = __append_list(MIN_HEAD, [key])
     res = r51.merge(tops, on=mkeys)
     res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
-    print(res)
+    if res is not None:
+        res.to_csv('away51top.csv')
+        print("*********************away51 top*********************")
+        print(res)
     # print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     # res = res.sort('Industry')
     return res
@@ -464,7 +471,7 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'analysis', args.start_date, '2018-03-08', '601009', '化工', 'industry')
+    # args = set_test_args(args, 'analysis', args.start_date, args.end_date, '601009', '化工', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
@@ -479,9 +486,8 @@ def run():
         update_concept()
         return
     elif args.methods == 'report':
-        data = init_data_set(BASIC_DATA_FILE)
-        new = init_data_set(crawl_file_name)
-        data = group_process(data, new)
+        data = update_basics(crawl_file_name)
+        data.to_csv('tmpdata.csv')
         data = get_today_analysis(data, args.end_date, args.category)
     if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
@@ -521,6 +527,10 @@ def get_today_analysis(data, end_date, category ):
     spe51 = pd.DataFrame()
     if special is not None:
         spe51 = out.merge(pd.DataFrame(special[BASCIC_KEY]), on=BASCIC_KEY)
+        if spe51 is not None:
+            print('\n\n************************* away51 & special  totals = ', len(spe51),
+                  '**************************')
+            print(spe51)
     hls = high_long_short(data, end_date)
     if len(spe51) > 0:
         res = hls.merge(pd.DataFrame(spe51[BASCIC_KEY]), on=BASCIC_KEY)

@@ -35,6 +35,8 @@ def num2symbl(x):
     :return:
     str, such as 600109.SS
     """
+    if len(x) > 6:
+        return x
     if x.startswith('60'):
         x = x+'.SS'
     else:
@@ -53,8 +55,7 @@ def symbl2num(x):
     if len(x) == 9:
         return x[:6]
     else:
-        print("symbol format error!!!!!!!!!!!   ", x)
-    return None
+        return x
 
 
 def init_data_set(input_file):

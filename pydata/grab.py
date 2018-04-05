@@ -347,14 +347,15 @@ class Grab(object):
 
     def data_load_tushare(self, start_date, end_date):
         df = init_data_set(SYMBOL_FILE)
-        symbls = df.code.drop_duplicates()
+        symbls = df.code.drop_duplicates().apply(symbl2num)
+        # symbls = df.code.drop_duplicates()
         data = pd.DataFrame()
         retry = pd.DataFrame()
         fail_symbls = []
         data, fail_symbls = self.load_all_quote_data_tushare(symbls, start_date, end_date)
-        while len(fail_symbls) > 50:
-            retry, fail_symbls = self.load_all_quote_data_tushare(fail_symbls, start_date, end_date)
-            data.append(retry)
+        # while len(fail_symbls) > 50:
+        #     retry, fail_symbls = self.load_all_quote_data_tushare(fail_symbls, start_date, end_date)
+        #     data.append(retry)
         print(" failed to download " + str(len(fail_symbls)) + " symbols")
         # pd.Series(fail_symbls).to_csv(FAIL_RECORDS_FILE)
         fails = pd.DataFrame(fail_symbls, columns=[BASCIC_KEY])

@@ -348,16 +348,11 @@ class Grab(object):
     def data_load_tushare(self, start_date, end_date):
         df = init_data_set(SYMBOL_FILE)
         symbls = df.code.drop_duplicates().apply(symbl2num)
-        # symbls = df.code.drop_duplicates()
-        data = pd.DataFrame()
-        retry = pd.DataFrame()
-        fail_symbls = []
         data, fail_symbls = self.load_all_quote_data_tushare(symbls, start_date, end_date)
         # while len(fail_symbls) > 50:
         #     retry, fail_symbls = self.load_all_quote_data_tushare(fail_symbls, start_date, end_date)
         #     data.append(retry)
-        print(" failed to download " + str(len(fail_symbls)) + " symbols")
-        # pd.Series(fail_symbls).to_csv(FAIL_RECORDS_FILE)
+        print(" failed to downlost\ad " + str(len(fail_symbls)) + " symbols")
         fails = pd.DataFrame(fail_symbls, columns=[BASCIC_KEY])
         fails.to_csv(FAIL_RECORDS_FILE)
         return data
@@ -419,6 +414,7 @@ class Grab(object):
             # writeSqlPD(df,quote['Symbol'])
             updateSqlPD(df, quote['Symbol'])
 
+
     def run(self):
         ## output types
         start = timeit.default_timer()
@@ -438,7 +434,7 @@ class Grab(object):
         res = pd.DataFrame()
         if self.update == 'Y':
             res = self.data_load_tushare(self.start_date, self.end_date)
-            if res is not None:
+            if res in Not None:
                 res.to_csv(today_file)
         elif self.updateone == 'all':
             res = self.get_whole_quote_hist(self.symbol)
@@ -454,10 +450,8 @@ class Grab(object):
             q = pd.DataFrame.from_csv(today_file)
             res = pd.concat((q, f), ignore_index=True)
             res.drop_duplicates(inplace=True)
-        if res is not None:
+        if res in Not None:
             res.to_csv(today_file)
-        else:
-            print("!!!!!!!!!!!!!!!!!!!!!result is nulll!!!!!!!!!!!!!!!!")
         print("Grab finish in:  " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 
 

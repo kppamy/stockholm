@@ -160,7 +160,7 @@ def find_high(data, bench, atr=3):
     res = high.merge(top[[BASCIC_KEY]], on=BASCIC_KEY)
     res.drop_duplicates(inplace=True)
     print('\n\n************************* high   totals = ', str(len(res)),   '**************************')
-    print(res)
+    print(res.head())
     return res
 
 
@@ -173,7 +173,7 @@ def find_long_short(data, bench):
     else:
         res = pd.concat((long, short), ignore_index=True)
         print('\n\n************************* long short  totals = ',  len(res), '**************************')
-        print(res)
+        print(res.head())
         return res
 
 
@@ -280,11 +280,11 @@ def top_industry(data, key='industry', value=None, num=3):
     res = pd.DataFrame()
     if value is None:
         res = marks.sort_values(by='mark', ascending=0)
-        print('==============rank all industry===============' , res.head())
+        print('==============rank all industry=== total: ', len(res), ' ============', res.head())
         res.to_csv('topall.csv')
     else:
         res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
-        print('==============rank ' + value + '=================')
+        print('==============rank ' + value + '====, total: ', len(res), '=============', res.head())
         res.to_csv('top' + '_' + value + '.csv')
     return res
 
@@ -420,9 +420,10 @@ def away51_top(data, bench, num=3, key='industry'):
     res = r51.merge(tops, on=mkeys)
     res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
     if res is not None:
+        res.sort_values(by=key, inplace=True)
         res.to_csv('away51top.csv')
-        print("*********************away51 top*********************")
-        print(res)
+        print("*********************away51 top*****total = ", str(len(res)), "****************")
+        print(res.head())
     # print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     # res = res.sort('Industry')
     return res
@@ -515,7 +516,8 @@ def high_long_short(data, end_date):
         # ls.index.names = ['index1', 'index2']
         both = high.merge(pd.DataFrame(ls[BASCIC_KEY]), on=BASCIC_KEY)
         print('\n\n************************* high & long  totals = ', len(both), '**************************')
-        print(both)
+        both.to_csv('high_long_short.csv')
+        print(both.head())
         return both
     return high
 
@@ -547,6 +549,7 @@ def update_basics(crawl_file):
     new = init_data_set(crawl_file)
     data = group_process(data, new)
     return data
+
 
 if __name__ == '__main__':
     run()

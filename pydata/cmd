@@ -4,3 +4,4 @@ p3 strategy.py --methods=away51 --enddate 2018-01-11 --category industry
 p3 strategy.py --methods=special --enddate 2018-01-11 
 p3 strategy.py --methods=high --enddate 2018-01-11 
 p3 strategy.py --methods=finance
+p3 strategy.py --methods  --category area --industry 海南

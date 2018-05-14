@@ -113,3 +113,14 @@ def clean_data(data):
         data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
         data.date = pd.to_datetime(data.date)
     return data
+
+def complete_code(code):
+    length = len(code)
+    tmp = ''
+    if length < 6:
+        for i in range(0, 6-length):
+            tmp = tmp + '0'
+        tmp = tmp + code
+        return tmp
+    elif length == 6:
+        return code

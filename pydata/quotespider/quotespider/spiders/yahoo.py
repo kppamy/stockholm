@@ -9,7 +9,8 @@ import scrapy
 from quotespider import utils
 from quotespider.items import PriceItem
 from scrapy.selector import Selector
-
+import pandas as pd
+import numpy as np
 
 def parse_date(date):
     if date:
@@ -87,8 +88,14 @@ class YahooSpider(scrapy.Spider):
 
     def parse(self, response):
         head = Selector(response=response).xpath('//thead/tr/th/span/text()').extract()
-        data = Selector(response=response).xpath('//tr/td/span').xpath('.//text()').extract()
+        head = ['Date', 'Open', 'High', 'Low', 'Close', 'Adj_Close', 'Volume']
+        th = pd.Series(head).str.lower()
+        items = Selector(response=response).xpath('//tr/td/span/text() | //tr/td[not(span)]').extract()[:-1]
+        data = pd.DataFrame(np.reshape(items, (100, 7)), columns=th)
         symbol = self._get_symbol_from_url(response.url)
+        data['symbol'] = '603999.SS'
+        data.date = pd.to_datetime(data.date)
+
         try:
             file_like = StringIO(response.body)
             rows = utils.parse_csv(file_like)

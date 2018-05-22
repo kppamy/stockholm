@@ -5,12 +5,11 @@ from io import StringIO
 from datetime import datetime
 from datetime import timedelta
 import scrapy
-
 from quotespider import utils
-from quotespider.items import PriceItem
 from scrapy.selector import Selector
 import pandas as pd
 import numpy as np
+
 
 def parse_date(date):
     if date:
@@ -54,14 +53,12 @@ def make_url(symbol, start_date=None, end_date=None):
     return start_url
 
 
-
 def generate_urls(symbols, start_date=None, end_date=None):
     for symbol in symbols:
         yield make_url(symbol, start_date, end_date)
 
 
 class YahooSpider(scrapy.Spider):
-
     name = 'yahoo'
     allowed_domains = ['finance.yahoo.com']
 
@@ -86,32 +83,25 @@ class YahooSpider(scrapy.Spider):
         else:
             self.start_urls = []
 
+
     def parse(self, response):
-        head = Selector(response=response).xpath('//thead/tr/th/span/text()').extract()
+        # head = Selector(response=response).xpath('//thead/tr/th/span/text()').extract()
         head = ['Date', 'Open', 'High', 'Low', 'Close', 'Adj_Close', 'Volume']
         th = pd.Series(head).str.lower()
         items = Selector(response=response).xpath('//tr/td/span/text() | //tr/td[not(span)]').extract()[:-1]
-        data = pd.DataFrame(np.reshape(items, (100, 7)), columns=th)
+        data = pd.DataFrame(np.reshape(np.array(items), (100, 7)), columns=th)
         symbol = self._get_symbol_from_url(response.url)
-        data['symbol'] = '603999.SS'
+        data['code'] = symbol
         data.date = pd.to_datetime(data.date)
-
-        try:
-            file_like = StringIO(response.body)
-            rows = utils.parse_csv(file_like)
-            for row in rows:
-                item = PriceItem(symbol=symbol)
-                for k, v in row.iteritems():
-                    item[k.replace(' ', '_').lower()] = v
-                yield item
-        finally:
-            file_like.close()
+        data.date = data.date.dt.strftime('%Y-%m-%d')
+        yield data.to_dict('list')
 
     def _get_symbol_from_url(self, url):
-        match = re.search(r'[\?&]s=([^&]*)', url)
+        match = re.search(r'[0-9]{6}\.[SZ]{2}', url)
         if match:
-            return match.group(1)
+            return match.group(0)
         return ''
 
-if '__name__' == '__main__' :
+
+if '__name__' == '__main__':
     spider = YahooSpider(symbols=['603999.SS'])

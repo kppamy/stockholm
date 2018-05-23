@@ -1,6 +1,24 @@
 import csv
-
 from datetime import datetime
+import pandas as pd
+
+def num2symbl(x):
+    """
+    convert code from 6 digitals to 6 digitals with .SS or .SZ sufix
+    the first one used by tushare
+    the latter used by yahoo
+    :param x:
+    str, such as 600109
+    :return:
+    str, such as 600109.SS
+    """
+    if len(x) > 6:
+        return x
+    if x.startswith('60'):
+        x = x+'.SS'
+    else:
+        x = x+'.SZ'
+    return x
 
 
 def check_date_arg(value, arg_name=None):
@@ -26,14 +44,12 @@ def parse_limit_arg(value):
 
 
 def load_symbols(file_path):
-    symbols = []
-    with open(file_path) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#'):
-                symbol = line.split()[0]
-                symbols.append(symbol)
-    return symbols
+    symbols = pd.Series()
+    data = pd.read_csv(file_path, dtype={'code': 'str'})
+    if 'code' in data:
+        symbols = data.code
+        symbols = symbols.apply(num2symbl)
+    return symbols.tolist()
 
 
 def parse_csv(file_like):

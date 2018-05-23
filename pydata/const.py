@@ -114,6 +114,7 @@ def clean_data(data):
         data.date = pd.to_datetime(data.date)
     return data
 
+
 def complete_code(code):
     length = len(code)
     tmp = ''
@@ -124,3 +125,24 @@ def complete_code(code):
         return tmp
     elif length == 6:
         return code
+
+
+def read_scrapy_json(file, data=None):
+    """
+
+    :param file:  str, json file name
+    :param data: dataframe
+    :return:
+    """
+    import json
+    with open(file, 'r') as f:
+        datastore = json.load(f)
+    if data is None:
+        data = pd.DataFrame()
+    for item in datastore:
+        quote = pd.DataFrame.from_dict(item)
+        data = data.append(quote)
+    return data
+
+
+# read_scrapy_json('yahoo.json')

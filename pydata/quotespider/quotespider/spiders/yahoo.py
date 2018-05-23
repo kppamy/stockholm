@@ -7,8 +7,10 @@ from datetime import timedelta
 import scrapy
 from quotespider import utils
 from scrapy.selector import Selector
+from scrapy.log import logging
 import pandas as pd
 import numpy as np
+import json
 
 
 def parse_date(date):
@@ -42,14 +44,11 @@ def make_url(symbol, start_date=None, end_date=None):
     #     'end_day': end_date[2]
     # }
 
-    print('=====start=======', startdate)
-    print('=====end=======', enddate)
     start_url = url % {
         'symbol': symbol,
         'start_date': startdate,
         'end_date': enddate
     }
-    print('=====start url=========', start_url)
     return start_url
 
 
@@ -65,13 +64,19 @@ class YahooSpider(scrapy.Spider):
     def __init__(self, **kwargs):
         super(YahooSpider, self).__init__(**kwargs)
 
+        logging.getLogger('scrapy').setLevel(logging.WARNING)
+
         symbols_arg = kwargs.get('symbols')
         start_date = kwargs.get('startdate', '')
         end_date = kwargs.get('enddate', '')
+        self.count = 0
+        self.fail = 0
+        self.fail_symbols = []
 
         utils.check_date_arg(start_date, 'startdate')
         utils.check_date_arg(end_date, 'enddate')
 
+        # symbols_arg = '/Users/chenay/pyt/pydata/pydata/allsymbols.csv'
         if symbols_arg:
             if os.path.exists(symbols_arg):
                 # get symbols from a text file
@@ -83,18 +88,35 @@ class YahooSpider(scrapy.Spider):
         else:
             self.start_urls = []
 
-
     def parse(self, response):
         # head = Selector(response=response).xpath('//thead/tr/th/span/text()').extract()
         head = ['Date', 'Open', 'High', 'Low', 'Close', 'Adj_Close', 'Volume']
         th = pd.Series(head).str.lower()
         items = Selector(response=response).xpath('//tr/td/span/text() | //tr/td[not(span)]').extract()[:-1]
-        data = pd.DataFrame(np.reshape(np.array(items), (100, 7)), columns=th)
         symbol = self._get_symbol_from_url(response.url)
+        if items is None or len(items) == 0:
+            self.fail = self.fail + 1
+            logging.info('failed to download ' + symbol + ' No.' + str(self.fail))
+            self.fail_symbols.append(symbol)
+            return
+        items = pd.Series(items)
+        drop_row(items, 'Dividend')
+        drop_row(items, 'Stock Split')
+        items = items.tolist()
+        rows = len(items)//7
+        data = pd.DataFrame(np.reshape(items[:(rows*7)], (rows, 7)), columns=th)
+
         data['code'] = symbol
-        data.date = pd.to_datetime(data.date)
+        try:
+            data.date = pd.to_datetime(data.date)
+        except ValueError:
+            data.to_csv(symbol+'.csv')
+            raise ValueError("symbol '%s'" % symbol)
         data.date = data.date.dt.strftime('%Y-%m-%d')
         yield data.to_dict('list')
+        self.count = self.count + 1
+        logging.info(symbol + '  success No.' + str(self.count))
+
 
     def _get_symbol_from_url(self, url):
         match = re.search(r'[0-9]{6}\.[SZ]{2}', url)
@@ -102,6 +124,16 @@ class YahooSpider(scrapy.Spider):
             return match.group(0)
         return ''
 
+    def closed(self, reason):
+        pd.Series(self.fail_symbols).to_csv('yahoo_fail.csv')
 
-if '__name__' == '__main__':
-    spider = YahooSpider(symbols=['603999.SS'])
+
+
+def drop_row(items, key):
+    trash = items[items.str.contains(key)]
+    if trash is not None:
+        items.drop(trash.index, inplace=True)
+        items.drop(trash.index - 1, inplace=True)
+
+# from scrapy.cmdline import execute
+# execute("scrapy crawl yahoo -a symbols='000511.SZ' ".split())

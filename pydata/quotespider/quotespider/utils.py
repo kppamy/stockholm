@@ -61,3 +61,43 @@ def parse_csv(file_like):
             header = headers[i]
             item[header] = value
         yield item
+
+
+def reverse_bool_array(data):
+    """
+    :param data: type bool array
+    :return:
+    """
+    return data.apply(lambda x: not x)
+
+
+def to_numstr(data, key='volume'):
+    """
+    :param data: DataFrame
+    :param key:
+    :return:
+    """
+    import re
+    regex = re.compile(r'[0-9]')
+    cond = data[key].str.match(regex)
+    data[key][reverse_bool_array(cond)] = '0'
+
+
+def drop_row(items, key):
+    """
+    Drop the row of Series contains certain keyword
+    :param items: pd.Series
+    :param key: str
+    :return:
+    """
+    trash = items[items.str.contains(key)]
+    if trash is not None:
+        items.drop(trash.index, inplace=True)
+        items.drop(trash.index - 1, inplace=True)
+
+
+def parse_date_fromstr(date_str):
+    if date_str:
+        date = datetime.strptime(date_str, '%Y%m%d')
+        return date
+    return None

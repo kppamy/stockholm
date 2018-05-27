@@ -1,7 +1,5 @@
 import os
 import re
-from io import StringIO
-
 from datetime import datetime
 from datetime import timedelta
 import scrapy
@@ -10,40 +8,19 @@ from scrapy.selector import Selector
 from scrapy.log import logging
 import pandas as pd
 import numpy as np
-import json
-
-
-def parse_date(date):
-    if date:
-        # date = datetime.strptime(date_str, '%Y%m%d')
-        return date.strftime("%s")
-    return None
 
 
 def make_url(symbol, start_date=None, end_date=None):
-    # url = ('http://ichart.finance.yahoo.com/table.csv?'
-    #        's=%(symbol)s&d=%(end_month)s&e=%(end_day)s&f=%(end_year)s&g=d&'
-    #        'a=%(start_month)s&b=%(start_day)s&c=%(start_year)s&ignore=.csv')
     url = ('https://finance.yahoo.com/quote/%(symbol)s/history?'
            'period1=%(start_date)s&period2=%(end_date)s&interval=1d&filter=history&frequency=1d')
+    start_date = utils.parse_date_fromstr(start_date)
+    end_date = utils.parse_date_fromstr(end_date)
     if not end_date:
         end_date = datetime.today().date()
     if not start_date:
         start_date = end_date - timedelta(days=365)
-
     startdate = start_date.strftime("%s")
     enddate = end_date.strftime("%s")
-
-    # return url % {
-    #     'symbol': symbol,
-    #     'start_year': start_date[0],
-    #     'start_month': start_date[1],
-    #     'start_day': start_date[2],
-    #     'end_year': end_date[0],
-    #     'end_month': end_date[1],
-    #     'end_day': end_date[2]
-    # }
-
     start_url = url % {
         'symbol': symbol,
         'start_date': startdate,
@@ -100,12 +77,11 @@ class YahooSpider(scrapy.Spider):
             self.fail_symbols.append(symbol)
             return
         items = pd.Series(items)
-        drop_row(items, 'Dividend')
-        drop_row(items, 'Stock Split')
+        utils.drop_row(items, 'Dividend')
+        utils.drop_row(items, 'Stock Split')
         items = items.tolist()
         rows = len(items)//7
         data = pd.DataFrame(np.reshape(items[:(rows*7)], (rows, 7)), columns=th)
-
         data['code'] = symbol
         try:
             data.date = pd.to_datetime(data.date)
@@ -113,10 +89,10 @@ class YahooSpider(scrapy.Spider):
             data.to_csv(symbol+'.csv')
             raise ValueError("symbol '%s'" % symbol)
         data.date = data.date.dt.strftime('%Y-%m-%d')
+        utils.to_numstr(data)
         yield data.to_dict('list')
         self.count = self.count + 1
         logging.info(symbol + '  success No.' + str(self.count))
-
 
     def _get_symbol_from_url(self, url):
         match = re.search(r'[0-9]{6}\.[SZ]{2}', url)
@@ -128,12 +104,5 @@ class YahooSpider(scrapy.Spider):
         pd.Series(self.fail_symbols).to_csv('yahoo_fail.csv')
 
 
-
-def drop_row(items, key):
-    trash = items[items.str.contains(key)]
-    if trash is not None:
-        items.drop(trash.index, inplace=True)
-        items.drop(trash.index - 1, inplace=True)
-
 # from scrapy.cmdline import execute
-# execute("scrapy crawl yahoo -a symbols='000511.SZ' ".split())
+# execute("scrapy crawl yahoo -a symbols=603999.SS -a enddate=20171220 -o tmp.json ".split())

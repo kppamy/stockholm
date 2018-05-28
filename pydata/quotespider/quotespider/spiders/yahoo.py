@@ -37,11 +37,12 @@ def generate_urls(symbols, start_date=None, end_date=None):
 class YahooSpider(scrapy.Spider):
     name = 'yahoo'
     allowed_domains = ['finance.yahoo.com']
+    # handle_httpstatus_list = [307]
 
     def __init__(self, **kwargs):
         super(YahooSpider, self).__init__(**kwargs)
 
-        logging.getLogger('scrapy').setLevel(logging.WARNING)
+        logging.getLogger('scrapy').setLevel(logging.DEBUG)
 
         symbols_arg = kwargs.get('symbols')
         start_date = kwargs.get('startdate', '')
@@ -54,10 +55,12 @@ class YahooSpider(scrapy.Spider):
         utils.check_date_arg(end_date, 'enddate')
 
         # symbols_arg = '/Users/chenay/pyt/pydata/pydata/allsymbols.csv'
+
         if symbols_arg:
-            if os.path.exists(symbols_arg):
+            symbols_path = os.path.abspath(symbols_arg)
+            if os.path.exists(symbols_path):
                 # get symbols from a text file
-                symbols = utils.load_symbols(symbols_arg)
+                symbols = utils.load_symbols(symbols_path)
             else:
                 # inline symbols in command
                 symbols = symbols_arg.split(',')
@@ -104,5 +107,5 @@ class YahooSpider(scrapy.Spider):
         pd.Series(self.fail_symbols).to_csv('yahoo_fail.csv')
 
 
-# from scrapy.cmdline import execute
-# execute("scrapy crawl yahoo -a symbols=603999.SS -a enddate=20171220 -o tmp.json ".split())
+from scrapy.cmdline import execute
+execute("scrapy crawl yahoo -a symbols=600077.SS -a enddate=20171220 -o tmp.json ".split())

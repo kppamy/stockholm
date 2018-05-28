@@ -21,6 +21,8 @@ USER_AGENT = 'quotespider (zhhcay@163.com)'
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
 
+# meta = {'dont_redirect': True, "handle_httpstatus_list": [302]}
+REDIRECT_MAX_TIMES = 30
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
 
@@ -33,7 +35,7 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 16
 CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+# COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -52,9 +54,11 @@ CONCURRENT_REQUESTS_PER_IP = 16
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'quotespider.middlewares.QuotespiderDownloaderMiddleware': 543,
-#}
+# DOWNLOADER_MIDDLEWARES = {
+#    # 'quotespider.middlewares.QuotespiderDownloaderMiddleware': 543,
+#     'scrapy.contrib.downloadermiddleware.redirect.RedirectMiddleware': None,
+#     'scrapy.contrib.downloadermiddleware.useragent.UserAgentMiddleware': 400,
+# }
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html

@@ -49,7 +49,7 @@ def load_symbols(file_path):
     if 'code' in data:
         symbols = data.code
         symbols = symbols.apply(num2symbl)
-    return symbols.tolist()
+    return symbols.tolist()[:10]
 
 
 def parse_csv(file_like):

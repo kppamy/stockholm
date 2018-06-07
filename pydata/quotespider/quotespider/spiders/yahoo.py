@@ -50,6 +50,8 @@ class YahooSpider(scrapy.Spider):
         self.count = 0
         self.fail = 0
         self.fail_symbols = []
+        self.data = pd.DataFrame()
+        self.end_date = end_date
 
         utils.check_date_arg(start_date, 'startdate')
         utils.check_date_arg(end_date, 'enddate')
@@ -68,11 +70,12 @@ class YahooSpider(scrapy.Spider):
         else:
             self.start_urls = []
 
+
     def parse(self, response):
         # head = Selector(response=response).xpath('//thead/tr/th/span/text()').extract()
         head = ['Date', 'Open', 'High', 'Low', 'Close', 'Adj_Close', 'Volume']
         th = pd.Series(head).str.lower()
-        items = Selector(response=response).xpath('//tr/td/span/text() | //tr/td[not(span)]').extract()[:-1]
+        items = Selector(response=response).xpath('//section//tr/td/span/text() | //tr/td[not(span)]').extract()[:-1]
         symbol = self._get_symbol_from_url(response.url)
         if items is None or len(items) == 0:
             self.fail = self.fail + 1
@@ -82,10 +85,12 @@ class YahooSpider(scrapy.Spider):
         items = pd.Series(items)
         utils.drop_row(items, 'Dividend')
         utils.drop_row(items, 'Stock Split')
+        utils.drop_row(items, 'td class')
         items = items.tolist()
         rows = len(items)//7
         data = pd.DataFrame(np.reshape(items[:(rows*7)], (rows, 7)), columns=th)
         data['code'] = symbol
+
         try:
             data.date = pd.to_datetime(data.date)
         except ValueError:
@@ -93,9 +98,11 @@ class YahooSpider(scrapy.Spider):
             raise ValueError("symbol '%s'" % symbol)
         data.date = data.date.dt.strftime('%Y-%m-%d')
         utils.to_numstr(data)
-        yield data.to_dict('list')
+        # yield data.to_dict('list')
+        self.data = self.data.append(data)
         self.count = self.count + 1
         logging.info(symbol + '  success No.' + str(self.count))
+
 
     def _get_symbol_from_url(self, url):
         match = re.search(r'[0-9]{6}\.[SZ]{2}', url)
@@ -105,7 +112,8 @@ class YahooSpider(scrapy.Spider):
 
     def closed(self, reason):
         pd.Series(self.fail_symbols).to_csv('yahoo_fail.csv')
+        self.data.to_csv('yahoo'+self.end_date+'.csv')
 
 
-from scrapy.cmdline import execute
-execute("scrapy crawl yahoo -a symbols=600077.SS -a enddate=20171220 -o tmp.json ".split())
+#from scrapy.cmdline import execute
+#execute("scrapy crawl yahoo -a symbols=600077.SS -a enddate=20171220 -o 20171220.json ".split())

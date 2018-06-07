@@ -93,7 +93,8 @@ def drop_row(items, key):
     trash = items[items.str.contains(key)]
     if trash is not None:
         items.drop(trash.index, inplace=True)
-        items.drop(trash.index - 1, inplace=True)
+        if ((trash.index - 1) > 0).all():
+            items.drop(trash.index - 1, inplace=True)
 
 
 def parse_date_fromstr(date_str):

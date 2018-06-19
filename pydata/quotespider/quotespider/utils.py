@@ -1,6 +1,8 @@
 import csv
 from datetime import datetime
 import pandas as pd
+import re
+import numpy as np
 
 def num2symbl(x):
     """
@@ -49,7 +51,7 @@ def load_symbols(file_path):
     if 'code' in data:
         symbols = data.code
         symbols = symbols.apply(num2symbl)
-    return symbols.tolist()[:10]
+    return symbols.tolist()
 
 
 def parse_csv(file_like):
@@ -83,6 +85,47 @@ def to_numstr(data, key='volume'):
     data[key][reverse_bool_array(cond)] = '0'
 
 
+def to_dtype(data, key='volume', dtype=int):
+    if (key not in data) or (data[key].dtype.type != np.object_):
+        return
+    regex = re.compile(r'[^0-9\.]')
+    data[key] = data[key].str.replace(',', '')
+    cond = data[key].str.match(regex)
+    if len(cond[cond == True]) == 0:
+        data[key] = data[key].astype(dtype)
+        print(key + 'matches , ignore')
+        return
+    delt = cond[cond == True]
+    data[key].loc[delt.index] = 0
+    data[key] = data[key].astype(dtype)
+
+
+def normal_yahoo_data(data):
+    to_dtype(data, 'open', float)
+    to_dtype(data, 'close', float)
+    to_dtype(data, 'adj_close', float)
+    to_dtype(data, 'high', float)
+    to_dtype(data, 'low', float)
+    to_dtype(data, 'volume', int)
+
+
+
+def find_first_ohlc(items):
+    reg = r'[a-z A-Z]{3} [0-9]{2}, [0-9]{4}'
+    # print('Dec 20, 2017'.find()
+    if len(items) == 0:
+        print('crawl nothing ')
+        return []
+    first = items[items.str.contains(reg)]
+    if len(first) > 0:
+        findex = first.index[0]
+        filter = items[findex:]
+    else:
+        print('can\'t find pattern match Date, ignore')
+        filter = []
+    return filter
+
+
 def drop_row(items, key):
     """
     Drop the row of Series contains certain keyword
@@ -102,3 +145,4 @@ def parse_date_fromstr(date_str):
         date = datetime.strptime(date_str, '%Y%m%d')
         return date
     return None
+

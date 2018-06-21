@@ -1,26 +1,6 @@
 import csv
 from datetime import datetime
-import pandas as pd
-import re
-import numpy as np
-
-def num2symbl(x):
-    """
-    convert code from 6 digitals to 6 digitals with .SS or .SZ sufix
-    the first one used by tushare
-    the latter used by yahoo
-    :param x:
-    str, such as 600109
-    :return:
-    str, such as 600109.SS
-    """
-    if len(x) > 6:
-        return x
-    if x.startswith('60'):
-        x = x+'.SS'
-    else:
-        x = x+'.SZ'
-    return x
+from utils import *
 
 
 def check_date_arg(value, arg_name=None):
@@ -65,41 +45,6 @@ def parse_csv(file_like):
         yield item
 
 
-def reverse_bool_array(data):
-    """
-    :param data: type bool array
-    :return:
-    """
-    return data.apply(lambda x: not x)
-
-
-def to_numstr(data, key='volume'):
-    """
-    :param data: DataFrame
-    :param key:
-    :return:
-    """
-    import re
-    regex = re.compile(r'[0-9]')
-    cond = data[key].str.match(regex)
-    data[key][reverse_bool_array(cond)] = '0'
-
-
-def to_dtype(data, key='volume', dtype=int):
-    if (key not in data) or (data[key].dtype.type != np.object_):
-        return
-    regex = re.compile(r'[^0-9\.]')
-    data[key] = data[key].str.replace(',', '')
-    cond = data[key].str.match(regex)
-    if len(cond[cond == True]) == 0:
-        data[key] = data[key].astype(dtype)
-        print(key + 'matches , ignore')
-        return
-    delt = cond[cond == True]
-    data[key].loc[delt.index] = 0
-    data[key] = data[key].astype(dtype)
-
-
 def normal_yahoo_data(data):
     to_dtype(data, 'open', float)
     to_dtype(data, 'close', float)
@@ -109,16 +54,31 @@ def normal_yahoo_data(data):
     to_dtype(data, 'volume', int)
 
 
+def to_tushare(data):
+    normal_yahoo_data(data)
+    data.code = data.code.apply(symbl2num)
+    data = data.sort_values(['code', 'date'])
+    data = data.replace(0, np.NAN)
+    data = data.fillna(method='ffill')
+    if 'adj_close' in data:
+        data.drop('adj_close', axis=1, inplace=True)
+    trash = data[data[['volume', 'open', 'close', 'high', 'low']].isnull().all(axis=1)]
+    data = data.drop(trash.index)
+    return data
+
 
 def find_first_ohlc(items):
-    reg = r'[a-z A-Z]{3} [0-9]{2}, [0-9]{4}'
+    # reg = r'[a-z A-Z]{3} [0-9]{2}, [0-9]{4}'
     # print('Dec 20, 2017'.find()
     if len(items) == 0:
         print('crawl nothing ')
         return []
-    first = items[items.str.contains(reg)]
+    num_reg = re.compile(r'[^0-9\.,]')
+    judge = items.str.contains(num_reg)
+    pattern = judge.rolling(6).sum()
+    first = pattern[pattern == 1]
     if len(first) > 0:
-        findex = first.index[0]
+        findex = (first.index - 6)[0]
         filter = items[findex:]
     else:
         print('can\'t find pattern match Date, ignore')
@@ -126,18 +86,10 @@ def find_first_ohlc(items):
     return filter
 
 
-def drop_row(items, key):
-    """
-    Drop the row of Series contains certain keyword
-    :param items: pd.Series
-    :param key: str
-    :return:
-    """
-    trash = items[items.str.contains(key)]
-    if trash is not None:
-        items.drop(trash.index, inplace=True)
-        if ((trash.index - 1) > 0).all():
-            items.drop(trash.index - 1, inplace=True)
+def drop_trash(items):
+    drop_row(items, 'Dividend')
+    drop_row(items, 'Stock Split')
+    drop_row(items, 'td class')
 
 
 def parse_date_fromstr(date_str):
@@ -145,4 +97,3 @@ def parse_date_fromstr(date_str):
         date = datetime.strptime(date_str, '%Y%m%d')
         return date
     return None
-

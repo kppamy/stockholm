@@ -16,7 +16,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 from liteDB import *
 import pandas as pd
-from const import *
+from utils import *
 import tushare as ts
 import numpy as np
 

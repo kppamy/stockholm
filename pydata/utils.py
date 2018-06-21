@@ -4,25 +4,9 @@ import timeit
 import pandas as pd
 from pandas.tseries.offsets import *
 from datetime import datetime
-
-DATEFORMAT = '%Y-%m-%d'
-OHLC_HEAD = ['date', 'open', 'high', 'low', 'close', 'volume', 'adj_close', 'symbol']
-# date head used by tushare : get_hists, get_hist_data, basic daily ticket date
-TOHLC_HEAD = ['close', 'code', 'date', 'high', 'low', 'ma10', 'ma20', 'ma5', 'open', 'p_change',
-                      'price_change', 'turnover', 'v_ma10', 'v_ma20', 'v_ma5', 'volume']
-SYMINFO_HEAD = ['industry_code', 'industry', 'code', 'name', 'area', 'concept_code', 'concept_name']
-FINANCE_HEAD = ['code', 'name', 'industry', 'area', 'pe', 'outstanding', 'totals', 'totalassets', 'liquidassets',
-                'fixedassets', 'reserved', 'reservedpershare', 'esp', 'bvps', 'pb', 'timetomarket', 'undp', 'perundp',
-                'rev', 'profit', 'gpr', 'npr', 'holders']
-MIN_HEAD = ['code', 'name']
-CODE_DTYPE = {'code': 'str'}
-BASCIC_KEY = 'code'
-BASIC_DATA_FILE = 'basic.csv'
-FOUNDAMENTAL_FILE = 'fundamental.csv'
-OUTPUT_DATA_FILE = 'data.csv'
-SYMBOL_FILE = 'allsymbols.csv'
-FAIL_RECORDS_FILE = 'fail.csv'
-FINANCE_REPORTS_FILE = 'reports.csv'
+import re
+from pconst import *
+import numpy as np
 
 
 def num2symbl(x):
@@ -119,17 +103,18 @@ def complete_code(code):
     length = len(code)
     tmp = ''
     if length < 6:
-        for i in range(0, 6-length):
-            tmp = tmp + '0'
-        tmp = tmp + code
+        more = 6-length
+        tmp = '0' * more + code
         return tmp
     elif length == 6:
         return code
+    else:
+        print('code length big than 6, attention!!!')
 
 
 def read_scrapy_json(file, data=None):
-    """
 
+    """
     :param file:  str, json file name
     :param data: dataframe
     :return:
@@ -144,5 +129,59 @@ def read_scrapy_json(file, data=None):
         data = data.append(quote)
     return data
 
+
+def to_numstr(data, key='volume'):
+    """
+    :param data: DataFrame
+    :param key:
+    :return:
+    """
+    import re
+    regex = re.compile(r'[0-9]')
+    cond = data[key].str.match(regex)
+    data[key][reverse_bool_array(cond)] = '0'
+
+def reverse_bool_array(data):
+    """
+    :param data: type bool array
+    :return:
+    """
+    return data.apply(lambda x: not x)
+
+
+def to_dtype(data, key='volume', dtype=int):
+    """
+    Assign the give column in dataframe to specified data type
+    :param data:  dataframe
+    :param key: column
+    :param dtype: datatype
+    :return:
+    """
+    if (key not in data) or (data[key].dtype.type != np.object_):
+        return
+    regex = re.compile(r'[^0-9\.]')
+    data[key] = data[key].str.replace(',', '')
+    cond = data[key].str.match(regex)
+    if len(cond[cond == True]) == 0:
+        data[key] = data[key].astype(dtype)
+        print(key + 'matches , ignore')
+        return
+    delt = cond[cond == True]
+    data[key].loc[delt.index] = 0
+    data[key] = data[key].astype(dtype)
+
+
+def drop_row(items, key):
+    """
+    Drop the row of Series contains certain keyword
+    :param items: pd.Series
+    :param key: str
+    :return:
+    """
+    trash = items[items.str.contains(key)]
+    if trash is not None:
+        items.drop(trash.index, inplace=True)
+        if ((trash.index - 1) > 0).all():
+            items.drop(trash.index - 1, inplace=True)
 
 # read_scrapy_json('yahoo.json')

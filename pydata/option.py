@@ -8,20 +8,20 @@ def get_date_str(offset):
     return date_str
 
 _default = dict(
-    reload_data = 'Y',
-    gen_portfolio = 'N',
-    output_type = 'csv',
-    charset = 'utf-8',
-    test_date_range = 60,
-    start_date = get_date_str(-360),
-    end_date = get_date_str(None),
-    target_date = get_date_str(None),
-    store_path = 'USER_HOME/tmp/stockholm_export',
-    thread = 10,
-    testfile_path = './portfolio_test.txt',
-    db_name = 'stockholm',
-    methods = 'report',
-    update='Y',
+    reload_data='N',
+    gen_portfolio='N',
+    output_type='csv',
+    charset='utf-8',
+    test_date_range=60,
+    start_date=get_date_str(-360),
+    end_date=get_date_str(None),
+    target_date=get_date_str(None),
+    store_path='USER_HOME/tmp/stockholm_export',
+    thread=10,
+    testfile_path='./portfolio_test.txt',
+    db_name='stockholm',
+    methods='report',
+    update='short',
     queryDB='N',
     updateone='N',
     symbol='',
@@ -35,7 +35,8 @@ parser.add_argument('--reload', type=str, default=_default['reload_data'], dest=
 
 parser.add_argument('--updateone', type=str, default=_default['updateone'], dest='updateone', help='get one quote history not (all/range/N)-(whole history/between time range/dont get), Default: %s' % _default['updateone'])
 
-parser.add_argument('--update', type=str, default=_default['update'], dest='update', help='Update all quotes data between given date not (Y/N), Default: %s' % _default['update'])
+parser.add_argument('--update', type=str, default=_default['update'], dest='update', help='Update all quotes data between given date not (long/short)'
++'long: crawl date by symbols, short: crawl data by time   Default: %s' % _default['update'])
 
 parser.add_argument('--queryDB', type=str, default=_default['queryDB'], dest='queryDB', help='query all quotes data directly from DB between given date  (Y/N), Default: %s' % _default['queryDB'])
 parser.add_argument('--symbol', type=str, default=_default['symbol'], dest='symbol', help='the idividual quote symbol to be updated, 000000.SS/111111.SZ, Default: %s' % _default['symbol'])

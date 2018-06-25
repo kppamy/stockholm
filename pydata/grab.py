@@ -229,6 +229,26 @@ class Grab(object):
         # df=df.sort(columns='Date',ascending=False)
         return df
 
+    def get_ts_day_all(self,start_date, end_date):
+        start=datetime.strptime(start_date,DATEFORMAT)
+        end=datetime.strptime(end_date,DATEFORMAT)
+        data = pd.DataFrame()
+        while start <= end:
+            sdate = datetime.strftime(start, DATEFORMAT)
+            wd = start.isoweekday()
+            if wd > 5 or wd < 1:
+                print(sdate + ' is not workday, ignore')
+                start = start + timedelta(1)
+                continue
+            today = ts.get_day_all(date=sdate)
+            today['date'] = sdate
+            today['close'] = today['price']
+            data = data.append(today[OHLC_HEAD])
+            print('craw all codes at '+ sdate)
+            start = start + timedelta(1)
+        return data
+
+
     def get_oneyear_quote(self, symbol, start_date, end_date):
         '''
         symbol: string, 600000.SS
@@ -432,11 +452,13 @@ class Grab(object):
             output_types = ["json", "csv"]
         # res=pd.DataFrame([],columns=DATA_HEAD)
         res = pd.DataFrame()
-        if self.update == 'Y':
+        if self.update == 'long':
             res = self.data_load_tushare(self.start_date, self.end_date)
-            if res in Not None:
-                res.to_csv(today_file)
-        elif self.updateone == 'all':
+        elif self.update == 'short':
+            res = self.get_ts_day_all(self.start_date, self.end_date)
+        if res is not None:
+            res.to_csv(today_file)
+        if self.updateone == 'all':
             res = self.get_whole_quote_hist(self.symbol)
             res.to_csv(symbl2num(self.symbol) + '.csv')
             return
@@ -450,7 +472,7 @@ class Grab(object):
             q = pd.DataFrame.from_csv(today_file)
             res = pd.concat((q, f), ignore_index=True)
             res.drop_duplicates(inplace=True)
-        if res in Not None:
+        if res is not None:
             res.to_csv(today_file)
         print("Grab finish in:  " + str(round(timeit.default_timer() - start)) + "s" + "\n")
 

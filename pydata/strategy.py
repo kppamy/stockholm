@@ -31,9 +31,9 @@ def __group_cal(df):
     df['v_change'] = df['volume'].pct_change()
     df['ma51'] = df['close'].rolling(51).mean()
     df['v6'] = df['volume'].rolling(6).mean()
-    # df['price_change'] = df['close'].pct_change()
-    # df['ma5'] = df['close'].rolling(5).mean()
-    # df['ma20' ] = df['close'].rolling(20).mean()
+    df['price_change'] = df['close'].pct_change()
+    df['ma5'] = df['close'].rolling(5).mean()
+    df['ma20' ] = df['close'].rolling(20).mean()
     df['ma30'] = df['close'].rolling(30).mean()
     df['price_chg_aggr'] = df['price_change'].rolling(3).sum()
     df['max'] = df.close.max()
@@ -112,7 +112,7 @@ def find_special(data, bench, key):
     else:
         special = pd.merge(tops[[BASCIC_KEY, 'mark']], fluc[[BASCIC_KEY, 'reason']], on=BASCIC_KEY)
         special.drop_duplicates(inplace=True)
-        print("*********************************what's special today:\n", special)
+        print("*********************what's special today**********:\n", special)
         return special
 
 
@@ -124,7 +124,7 @@ def find_fluctuate(data, bench):
     col = [u'code', u'date']
     ab = df[(df.price_change > 6) | (df.price_change < -6)][col]
     ab['reason'] = '+_6%'
-    vh = df[df.volume > (df.v6 * 3)][col]
+    vh = df[(df.volume > (df.v6 * 3)) & (df.price_change > 0)][col]
     vh['reason'] = 'volume doubles'
     ah = df[(df.price_chg_aggr > 15) | (df.price_chg_aggr < -15)][col]
     ah['reason'] = 'aggregate > +_15%'
@@ -275,16 +275,17 @@ def top_industry(data, key='industry', value=None, num=3):
         select = data
     else:
         select = data[data[key] == value]
-    marks = select[s4].groupby(s3)['mark'].sum()
+    # marks = select[s4].groupby(s3)['mark'].sum()
+    marks = select[s4].groupby(s3)['mark'].mean()
     marks = marks.reset_index()
     res = pd.DataFrame()
     if value is None:
         res = marks.sort_values(by='mark', ascending=0)
-        print('==============rank all industry=== total: ', len(res), ' ============', res.head())
+        # print('==============rank all industry=== total: ', len(res), ' ============\n', res.head())
         res.to_csv('topall.csv')
     else:
         res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
-        print('==============rank ' + value + '====, total: ', len(res), '=============', res.head())
+        print('==============rank ' + value + '====, total: ', len(res), '=============\n', res.head())
         res.to_csv('top' + '_' + value + '.csv')
     return res
 
@@ -434,7 +435,8 @@ def __append_list(list1, list2):
 
 
 def __away51(m51, date):
-    r51 = m51[(m51.close < (m51.ma51 * 0.9)) & (m51.date == date)]
+    r51 = m51[(m51.date == date) & (m51.close > (m51.ma51 * 1.1))]
+    # r51 = m51[(m51.date == date) & (m51.close < (m51.ma51 * 0.9))]
     # r51 = m51[((m51.close > (m51.ma51*1.1)) | (m51.close < (m51.ma51*0.9))) & (m51.date == date)]
     return r51
 
@@ -472,7 +474,7 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'analysis', args.start_date, args.end_date, '601009', '化工', 'industry')
+    # args = set_test_args(args, 'analysis', args.start_date, '2018-06-22', '', '', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
@@ -533,14 +535,14 @@ def get_today_analysis(data, end_date, category ):
             print('\n\n************************* away51 & special  totals = ', len(spe51),
                   '**************************')
             print(spe51)
-    hls = high_long_short(data, end_date)
+    hls = high_long_short(detail, end_date)
     if len(spe51) > 0:
         res = hls.merge(pd.DataFrame(spe51[BASCIC_KEY]), on=BASCIC_KEY)
         print('\n\n************************* away51 & special & high & long  totals = ', len(res),
               '**************************')
         print(res)
         return res
-    return hls
+    return data
 
 
 def update_basics(crawl_file):

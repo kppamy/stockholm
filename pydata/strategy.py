@@ -275,7 +275,7 @@ def top_industry(data, key='industry', value=None, num=3):
         select = data
     else:
         select = data[data[key] == value]
-    # marks = select[s4].groupby(s3)['mark'].sum()
+    #marks = select[s4].groupby(s3)['mark'].sum()
     marks = select[s4].groupby(s3)['mark'].mean()
     marks = marks.reset_index()
     res = pd.DataFrame()
@@ -362,8 +362,10 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
                 top_industry(data, key, value, None)
 
 
-def get_finance_reports(years=1):
+def get_finance_reports(years=4):
     reports = init_data_set(FINANCE_REPORTS_FILE)
+    if reports is None:
+        reports = pd.DataFrame()
     thisyear = datetime.today().year
     for i in range(years):
         year = thisyear - i
@@ -372,6 +374,7 @@ def get_finance_reports(years=1):
                 data = ts.get_report_data(year, quarter + 1)
                 data['period'] = str(year) + str(0) + str(quarter+1)
                 reports = reports.append(data)
+                print(" Get report year: " + str(year) + " quarter: " + str(quarter + 1))
             except IOError:
                 print(" Network expection year: " + str(year) + " quarter: " + str(quarter+1))
                 continue

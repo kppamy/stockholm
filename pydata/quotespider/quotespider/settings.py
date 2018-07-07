@@ -20,6 +20,7 @@ USER_AGENT = 'quotespider (zhhcay@163.com)'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
+# REDIRECT_ENABLED = False
 
 # meta = {'dont_redirect': True, "handle_httpstatus_list": [302]}
 #REDIRECT_MAX_TIMES = 30
@@ -55,10 +56,17 @@ CONCURRENT_REQUESTS_PER_IP = 16
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#    # 'quotespider.middlewares.QuotespiderDownloaderMiddleware': 543,
-#     'scrapy.contrib.downloadermiddleware.redirect.RedirectMiddleware': None,
-#     'scrapy.contrib.downloadermiddleware.useragent.UserAgentMiddleware': 400,
+#     # 'quotespider.middlewares.QuotespiderDownloaderMiddleware': 543,
+#     #'scrapy.contrib.downloadermiddleware.redirect.RedirectMiddleware': None,
+#      #'scrapy.contrib.downloadermiddleware.useragent.UserAgentMiddleware': 400,
+#      'scrapyredirect.HomepageRedirectMiddleware': 575,
 # }
+
+# SPIDER_MIDDLEWARES = {
+     # 'scrapyredirect.HomepageRedirectMiddleware': 575,
+# }
+
+# RETRY_HTTP_CODES = [307]
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html

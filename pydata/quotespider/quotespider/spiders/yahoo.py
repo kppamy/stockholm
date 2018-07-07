@@ -8,12 +8,14 @@ from scrapy.selector import Selector
 from scrapy.log import logging
 import pandas as pd
 import numpy as np
+from scrapy.http import Request
 
 
 class YahooSpider(scrapy.Spider):
     name = 'yahoo'
     allowed_domains = ['finance.yahoo.com']
-    # handle_httpstatus_list = [307]
+    # handle_httpstatus_list = [307, 302]
+
 
     def __init__(self, **kwargs):
         super(YahooSpider, self).__init__(**kwargs)
@@ -45,6 +47,12 @@ class YahooSpider(scrapy.Spider):
             self.start_urls = self.generate_urls(symbols, start_date, end_date)
         else:
             self.start_urls = []
+
+    # def make_requests_from_url(self, url):
+    #     return Request(url, dont_filter=True, meta = {
+    #               'dont_redirect': True,
+    #               'handle_httpstatus_list': [302, 307]
+    #         })
 
     def parse(self, response):
         # head = Selector(response=response).xpath('//thead/tr/th/span/text()').extract()
@@ -116,4 +124,4 @@ class YahooSpider(scrapy.Spider):
 
 from scrapy.cmdline import execute
 # execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180621 ".split())
-# execute("scrapy crawl yahoo -a symbols=600162.SS -a startdate=20180621".split())
+# execute("scrapy crawl yahoo -a symbols=603829.SS -a startdate=20180621".split())

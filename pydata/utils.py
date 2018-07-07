@@ -164,7 +164,7 @@ def to_dtype(data, key='volume', dtype=int):
     cond = data[key].str.match(regex)
     if len(cond[cond == True]) == 0:
         data[key] = data[key].astype(dtype)
-        print(key + 'matches , ignore')
+        # print(key + ' matches , ignore')
         return
     delt = cond[cond == True]
     data[key].loc[delt.index] = 0

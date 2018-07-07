@@ -172,7 +172,7 @@ def find_long_short(data, bench):
         print('\n\n*************************No long*short  array**************************')
     else:
         res = pd.concat((long, short), ignore_index=True)
-        print('\n\n************************* long short  totals = ',  len(res), '**************************')
+        print('\n\n**************** longs = ',  len(long), '*** short = ', len(short), ' ************************')
         print(res.head())
         return res
 
@@ -274,7 +274,7 @@ def top_industry(data, key='industry', value=None, num=3):
     if value is None:
         select = data
     else:
-        select = data[data[key] == value]
+        select = data[data[key].str.contains(value)]
     #marks = select[s4].groupby(s3)['mark'].sum()
     marks = select[s4].groupby(s3)['mark'].mean()
     marks = marks.reset_index()
@@ -464,9 +464,9 @@ def slice_nan(data, key):
 
 def set_test_args(args, method, start_date, end_date, symbol, industry, category):
     args.methods = method
-    # args.symbol = symbol
+    args.symbol = symbol
     args.category = category
-    # args.industry = industry
+    args.industry = industry
     args.end_date = end_date
     args.start_date = start_date
     return args
@@ -477,7 +477,7 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'analysis', args.start_date, '2018-06-22', '', '', 'industry')
+    args = set_test_args(args, 'rank', args.start_date, '2018-06-22', '300146', '', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
@@ -508,7 +508,7 @@ def run():
         rank_industry(data, args.industry, args.symbol, args.category)
     elif args.methods == 'special':
         find_special(data, args.end_date, key=args.category)
-    elif args.methods == 'high':
+    elif args.methods == 'ls':
         high_long_short(data, args.end_date)
     elif args.methods == 'analysis':
         data = get_today_analysis(data, args.end_date, args.category)

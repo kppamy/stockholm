@@ -73,9 +73,9 @@ def find_first_ohlc(items):
     if len(items) == 0:
         print('crawl nothing ')
         return []
-    num_reg = re.compile(r'[^0-9\.,]')
+    num_reg = re.compile(r'[^0-9\.,] | ^-')
     judge = items.str.contains(num_reg)
-    pattern = judge.rolling(6).sum()
+    pattern = judge.rolling(7).sum()
     first = pattern[pattern == 1]
     if len(first) > 0:
         findex = (first.index - 6)[0]

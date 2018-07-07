@@ -115,5 +115,5 @@ class YahooSpider(scrapy.Spider):
 
 
 from scrapy.cmdline import execute
-# execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180522 ".split())
-# execute("scrapy crawl yahoo -a symbols= -a startdate=20180522".split())
+# execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180621 ".split())
+# execute("scrapy crawl yahoo -a symbols=600162.SS -a startdate=20180621".split())

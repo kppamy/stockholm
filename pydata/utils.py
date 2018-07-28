@@ -184,4 +184,16 @@ def drop_row(items, key):
         if ((trash.index - 1) > 0).all():
             items.drop(trash.index - 1, inplace=True)
 
+def unixTimestamp_trans(time):
+    """
+    Transfter unix timestamp to human readable time str
+    such as from 1531896891 to '2018-07-18 14:54:51'
+    :param time: int
+    :return: str
+    """
+    va = datetime.datetime.fromtimestamp(time)
+    value = va.strftime('%Y-%m-%d %H:%M:%S')
+    return value
+
+
 # read_scrapy_json('yahoo.json')

@@ -10,6 +10,9 @@ import pandas as pd
 import numpy as np
 from scrapy.http import Request
 
+# Example data format:
+# Date	Open	High	Low	Close*	Adj Close**	Volume
+# Sep 14, 2018	3.05	3.06	3.03	3.04	3.04	1,755,000
 
 class YahooSpider(scrapy.Spider):
     name = 'yahoo'
@@ -123,5 +126,5 @@ class YahooSpider(scrapy.Spider):
 
 
 from scrapy.cmdline import execute
-# execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180621 ".split())
-# execute("scrapy crawl yahoo -a symbols=603829.SS -a startdate=20180621".split())
+# execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180622 ".split())
+# execute("scrapy crawl yahoo -a symbols=600077.SS -a startdate=20180622".split())

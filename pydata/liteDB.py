@@ -393,9 +393,9 @@ def init():
 
 def main(args):
     init()
-    data = fetchOnePD('300003.SZ')
-    data.columns = data.columns.str.lower()
-    data = clean_data(data)
+    # data = fetchOnePD('300003.SZ')
+    # data.columns = data.columns.str.lower()
+    # data = clean_data(data)
     if args.queryDB == 'Y':
         df = fetchallPD(args.start_date, args.end_date)
         df.to_csv('query.csv')

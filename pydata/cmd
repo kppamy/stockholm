@@ -5,3 +5,7 @@ p3 strategy.py --methods=special --enddate 2018-01-11
 p3 strategy.py --methods=high --enddate 2018-01-11 
 p3 strategy.py --methods=finance
 p3 strategy.py --methods  --category area --industry 海南
+
+cd /Users/cay/pyt/pydata/pydata/quotespider/quotespider/spiders
+scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180522
+scrapy crawl yahoo -a symbols=600077.SS -a startdate=20180622

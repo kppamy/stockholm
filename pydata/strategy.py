@@ -279,13 +279,10 @@ def top_industry(data, key='industry', value=None, num=3):
     marks = select[s4].groupby(s3)['mark'].mean()
     marks = marks.reset_index()
     res = pd.DataFrame()
+    res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
     if value is None:
-        res = marks.sort_values(by='mark', ascending=0)
-        # print('==============rank all industry=== total: ', len(res), ' ============\n', res.head())
         res.to_csv('topall.csv')
     else:
-        res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
-        print('==============rank ' + value + '====, total: ', len(res), '=============\n', res.head())
         res.to_csv('top' + '_' + value + '.csv')
     return res
 
@@ -311,14 +308,14 @@ def get_industry_data(df, source='Local', key='industry'):
         mkeys = BASCIC_KEY
     else:
         mkeys = MIN_HEAD
-    data = pd.merge(df, finance[mcolumns], how='left', on=mkeys)
+    data = pd.merge(df, finance[mcolumns], how='right', on=mkeys)
     data.drop_duplicates(inplace=True)
     len1 = len(df[BASCIC_KEY].drop_duplicates())
     len2 = len(data[BASCIC_KEY].drop_duplicates())
     if len1 != len2:
         print("!!!!!!!!!!!!!!!!!!!!data might gets lost !!!!!!!!!!!!!!  before merge: " + str(len1)
               + " after merge: " + str(len2))
-        return None
+        return data
     else:
         return data
 
@@ -477,7 +474,7 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    args = set_test_args(args, 'rank', args.start_date, '2018-06-22', '300146', '', 'industry')
+    # args = set_test_args(args, 'special', args.start_date, '2018-04-01', None, None, 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':

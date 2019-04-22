@@ -474,8 +474,10 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'special', args.start_date, '2018-04-01', None, None, 'industry')
+    # args = set_test_args(args, 'report', '2019-04-02', '2019-04-19', None, None, 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
+    if not os.path.isfile(crawl_file_name):
+        crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     start = timeit.default_timer()
     if args.methods == 'basic':
         data = update_basics(crawl_file_name)

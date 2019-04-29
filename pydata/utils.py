@@ -96,10 +96,15 @@ def clean_data(data):
         data.date = data.date.astype('str')
         data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
         data.date = pd.to_datetime(data.date)
+    data = data.fillna(method='ffill')
     return data
 
 
 def complete_code(code):
+    """
+    find the one doesn't have 6 digits code:
+    df[df.code.str.contains(re.compile(r'[0-9]{6}')) == 0 ].code.drop_duplicates()
+    """
     length = len(code)
     tmp = ''
     if length < 6:

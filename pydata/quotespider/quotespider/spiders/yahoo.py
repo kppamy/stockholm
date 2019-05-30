@@ -79,7 +79,10 @@ class YahooSpider(scrapy.Spider):
         try:
             data.date = pd.to_datetime(data.date)
         except ValueError:
-            data.to_csv(symbol+'.csv')
+            # data.to_csv(symbol+'.csv')
+            self.fail = self.fail + 1
+            logging.info('failed to download ' + symbol + ' No.' + str(self.fail))
+            self.fail_symbols.append(symbol)
             raise ValueError("symbol '%s'" % symbol)
         data.date = data.date.dt.strftime('%Y-%m-%d')
         if len(data) > 0:
@@ -125,6 +128,6 @@ class YahooSpider(scrapy.Spider):
             yield self.make_url(symbol, start_date, end_date)
 
 
-from scrapy.cmdline import execute
+# from scrapy.cmdline import execute
 # execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180622 ".split())
-# execute("scrapy crawl yahoo -a symbols=600077.SS -a startdate=20180622".split())
+# execute("scrapy crawl yahoo -a symbols=600432.SS,600806.SS,000511.S -a startdate=20190419".split())

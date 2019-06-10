@@ -496,6 +496,8 @@ def run():
         data = get_today_analysis(data, args.end_date, args.category)
     if data is not None and len(data) != 0:
         data.to_csv(OUTPUT_DATA_FILE)
+        if os.path.isfile("tmpdata.csv"):
+           os.remove("tmpdata.csv")
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
         return
     data = init_data_set(OUTPUT_DATA_FILE)

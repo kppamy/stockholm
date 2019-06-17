@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-import timeit
-import pandas as pd
-from pandas.tseries.offsets import *
-from datetime import datetime
+
 import re
 from pconst import *
 import numpy as np
@@ -80,6 +77,16 @@ def get_last_work_day(day):
         return day
 
 
+def get_workdays(start, end):
+    '''
+    get work days between start and end
+    :param start: date str YYYY-MM-DD
+    :param end: date str YYYY-MM-DD
+    :return:
+    '''
+    return (datetime.strptime(end, DATEFORMAT) - datetime.strptime(start, DATEFORMAT)).days
+
+
 def clean_data(data):
     if 'Unnamed: 0' in data:
         data = data.drop('Unnamed: 0', axis=1)
@@ -146,6 +153,7 @@ def to_numstr(data, key='volume'):
     cond = data[key].str.match(regex)
     data[key][reverse_bool_array(cond)] = '0'
 
+
 def reverse_bool_array(data):
     """
     :param data: type bool array
@@ -188,6 +196,7 @@ def drop_row(items, key):
         items.drop(trash.index, inplace=True)
         if ((trash.index - 1) > 0).all():
             items.drop(trash.index - 1, inplace=True)
+
 
 def unixTimestamp_trans(time):
     """

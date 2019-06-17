@@ -7,6 +7,7 @@ from datetime import datetime
 
 DATEFORMAT = '%Y-%m-%d'
 OHLC_HEAD = ['date', 'open', 'high', 'low', 'close', 'volume', 'symbol']
+BASIC_HEAD = ['date', 'open', 'high', 'low', 'close', 'volume', 'code']
 # date head used by tushare : get_hists, get_hist_data, basic daily ticket date
 TOHLC_HEAD = ['close', 'code', 'date', 'high', 'low', 'ma10', 'ma20', 'ma5', 'open', 'p_change',
                       'price_change', 'turnover', 'v_ma10', 'v_ma20', 'v_ma5', 'volume']

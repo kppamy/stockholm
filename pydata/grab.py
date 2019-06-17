@@ -229,6 +229,7 @@ class Grab(object):
         # df=df.sort(columns='Date',ascending=False)
         return df
 
+
     def get_ts_day_all(self,start_date, end_date):
         start=datetime.strptime(start_date,DATEFORMAT)
         end=datetime.strptime(end_date,DATEFORMAT)
@@ -240,11 +241,14 @@ class Grab(object):
                 print(sdate + ' is not workday, ignore')
                 start = start + timedelta(1)
                 continue
-            today = ts.get_day_all(date=sdate)
-            today['date'] = sdate
-            today['close'] = today['price']
-            data = data.append(today[OHLC_HEAD])
-            print('craw all codes at '+ sdate)
+            try:
+                today = ts.get_day_all(date=sdate)
+                today['date'] = sdate
+                today['close'] = today['price']
+                data = data.append(today[BASIC_HEAD])
+                print('craw all codes at ' + sdate)
+            except:
+                print('Download all data error on: '+sdate)
             start = start + timedelta(1)
         return data
 
@@ -439,7 +443,8 @@ class Grab(object):
         ## output types
         start = timeit.default_timer()
         output_types = []
-        self.start_date = get_last_query_date()
+        if self.start_date is None:
+            self.start_date = get_last_query_date()
         self.end_date = get_last_work_day(self.end_date)
         print("==============startdate============= ", self.start_date)
         print("==============enddate=============== ", self.end_date)
@@ -452,9 +457,9 @@ class Grab(object):
             output_types = ["json", "csv"]
         # res=pd.DataFrame([],columns=DATA_HEAD)
         res = pd.DataFrame()
-        if self.update == 'long':
+        if self.update == 'days':
             res = self.data_load_tushare(self.start_date, self.end_date)
-        elif self.update == 'short':
+        elif self.update == 'today':
             res = self.get_ts_day_all(self.start_date, self.end_date)
         if res is not None:
             res.to_csv(today_file)

@@ -280,10 +280,10 @@ def top_industry(data, key='industry', value=None, num=3):
     marks = marks.reset_index()
     res = pd.DataFrame()
     res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
-    if value is None:
-        res.to_csv('topall.csv')
-    else:
-        res.to_csv('top' + '_' + value + '.csv')
+    # if value is None:
+    #     res.to_csv('topall.csv')
+    # else:
+    #     res.to_csv('top' + '_' + value + '.csv')
     return res
 
 
@@ -422,7 +422,7 @@ def away51_top(data, bench, num=3, key='industry'):
     res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
     if res is not None:
         res.sort_values(by=key, inplace=True)
-        res.to_csv('away51top.csv')
+        # res.to_csv('away51top.csv')
         print("*********************away51 top*****total = ", str(len(res)), "****************")
         print(res.head())
     # print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
@@ -459,6 +459,47 @@ def slice_nan(data, key):
     return sub0
 
 
+def find_latest_input():
+    import glob
+    crawl = glob.glob('./crawl*.csv')
+    yahoo = glob.glob('./yahoo*.csv')
+    latest_file = max(crawl + yahoo, key=os.path.getctime)
+    return latest_file
+
+
+def merge_data_files(start):
+    '''
+    :param start: str 2019-06-17
+    :return:
+    '''
+    pivot = datetime.strptime(start, DATEFORMAT)
+    if pivot is None:
+        pivot = datetime.today() - datetime.timedelta(180)
+    import glob
+    list_of_files = glob.glob('./crawl*.csv') + glob.glob('./yahoo*.csv')
+    data = pd.DataFrame()
+    items = 0
+    for file in list_of_files:
+        if datetime.utcfromtimestamp(os.path.getctime(file)) > pivot:
+            current = init_data_set(file)
+            items = items + len(current)
+            print('merge file: ' + file)
+            if len(data) == 0:
+                data = data.append(current[BASIC_HEAD])
+            else:
+                data = pd.concat((data, current[BASIC_HEAD]), ignore_index=True)
+    data = data.drop_duplicates()
+    data.date = pd.to_datetime(data.date)
+    print('data items after merge: ' + str(len(data)) + ' before merge: ' + str(items))
+    dates = data.date.sort_values()
+    end = str(dates.values[-1]).replace('T00:00:00.000000000', '').replace('-', '')
+    start = str(dates.values[0]).replace('T00:00:00.000000000', '').replace('-', '')
+    workdays = (datetime.strptime(end, '%Y%m%d') - datetime.strptime(start, '%Y%m%d')).days/7*5
+    if (workdays - len(dates.drop_duplicates()))/workdays > 0.1:
+        print('attention!!!!!!!!!!!! more than 10% date is lost')
+    data.to_csv('crawl' + start + '_' + end + '.csv')
+
+
 def set_test_args(args, method, start_date, end_date, symbol, industry, category):
     args.methods = method
     args.symbol = symbol
@@ -478,6 +519,8 @@ def run():
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
+        if not os.path.isfile(crawl_file_name):
+            crawl_file_name = find_latest_input()
     start = timeit.default_timer()
     if args.methods == 'basic':
         data = update_basics(crawl_file_name)
@@ -504,7 +547,7 @@ def run():
     data = get_industry_data(data, key=args.category)
     if args.methods == 'away51':
         out = away51_top(data, args.end_date, key=args.category)
-        out.to_csv('away51top.csv')
+        # out.to_csv('away51top.csv')
     elif args.methods == 'rank':
         rank_industry(data, args.industry, args.symbol, args.category)
     elif args.methods == 'special':
@@ -522,7 +565,7 @@ def high_long_short(data, end_date):
         # ls.index.names = ['index1', 'index2']
         both = high.merge(pd.DataFrame(ls[BASCIC_KEY]), on=BASCIC_KEY)
         print('\n\n************************* high & long  totals = ', len(both), '**************************')
-        both.to_csv('high_long_short.csv')
+        # both.to_csv('high_long_short.csv')
         print(both.head())
         return both
     return high

@@ -116,6 +116,17 @@ def find_special(data, bench, key):
         return special
 
 
+def find_vupu(data, bench, key='industry'):
+    data = data[data.date == bench]
+    data.dropna(inplace=True)
+    double = pd.value_counts(data[(data.v_change > 0) & (data.price_change > 0)][key])
+    all = pd.value_counts(data[(data.date == bench)][key])
+    hot = (double/all)
+    hot = hot.sort_values(ascending=False)
+    hottest = hot[:5];
+    print("*********************hottest industry %s**********:\n", hottest)
+    return hottest
+
 def find_fluctuate(data, bench):
     if data is None:
         data = init_data_set(OUTPUT_DATA_FILE)
@@ -275,7 +286,6 @@ def top_industry(data, key='industry', value=None, num=3):
         select = data
     else:
         select = data[data[key].str.contains(value)]
-    #marks = select[s4].groupby(s3)['mark'].sum()
     marks = select[s4].groupby(s3)['mark'].mean()
     marks = marks.reset_index()
     res = pd.DataFrame()
@@ -339,12 +349,18 @@ def __symbol_convert(x, dic):
 
 def rank_industry(data, industry_value=None, symbol=None, key='industry'):
     """
-    get an industry mark rank through a stock
+    get industry rank order through a stock or through an industry
     symbol:string, the symbol of the code
     """
-    if industry_value is not None and industry_value != '':
-        select = industry_value
-        top_industry(data, key, select, None)
+    if industry_value is not None:
+        sort = pd.DataFrame()
+        if isinstance(industry_value, (list, pd.Series, np.ndarray)):
+            for value in industry_value:
+                res = top_industry(data, key, value)
+                sort = sort.append(res)
+        elif isinstance(industry_value, str) and industry_value != '':
+            sort = top_industry(data, key, industry_value)
+        print(" %s top 3: \n", sort)
     elif symbol is None or symbol == '':
         top_industry(data, key)
     else:
@@ -515,7 +531,7 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'report', '2019-04-02', '2019-04-19', None, None, 'industry')
+    # args = set_test_args(args, 'rank', '2019-04-20', '2019-11-20', "600766", '黄金', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -544,11 +560,16 @@ def run():
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
         return
     data = init_data_set(OUTPUT_DATA_FILE)
-    data = get_industry_data(data, key=args.category)
+    data = get_industry_data(data, args.category)
     if args.methods == 'away51':
         out = away51_top(data, args.end_date, key=args.category)
-        # out.to_csv('away51top.csv')
+        out.to_csv('away51top.csv')
+    elif args.methods == 'hot':
+        hottest = find_vupu(data,args.end_date,key=args.category)
+        inds = pd.Series.keys(hottest).values
+        rank_industry(data, inds, args.symbol, args.category)
     elif args.methods == 'rank':
+        data = get_industry_data(data, args.category)
         rank_industry(data, args.industry, args.symbol, args.category)
     elif args.methods == 'special':
         find_special(data, args.end_date, key=args.category)

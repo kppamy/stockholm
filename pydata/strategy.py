@@ -123,9 +123,32 @@ def find_vupu(data, bench, key='industry'):
     all = pd.value_counts(data[(data.date == bench)][key])
     hot = (double/all)
     hot = hot.sort_values(ascending=False)
-    hottest = hot[:5];
+    hottest = hot[:5]
     print("*********************hottest industry %s**********:\n", hottest)
     return hottest
+
+
+def find_cow(criteria):
+    '''
+    type: periods-numbe of periods
+
+    '''
+    rp = init_data_set(FINANCE_REPORTS_FILE)
+    slices = rp[['code', 'name', 'eps', 'net_profits', 'profits_yoy', 'period']]
+    slices.drop_duplicates(inplace=True)
+    thisyear = str(datetime.today().year)
+    period = slices.period.astype('str').str
+    focus = slices[period.endswith('04') | period.startswith(thisyear)]
+    above = focus[focus.profits_yoy > criteria]
+    good = above.groupby('code').count()
+    import math
+    # last four year year report , and the quarter report of this year
+    num = math.floor(datetime.today().month/3) + 4
+    cow = good[good.period == num]
+    res = rp[rp.code.isin(cow.index)]
+    codes = res[['code','name']].drop_duplicates()
+    return codes
+
 
 def find_fluctuate(data, bench):
     if data is None:
@@ -361,18 +384,22 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
         elif isinstance(industry_value, str) and industry_value != '':
             sort = top_industry(data, key, industry_value)
         print(" %s top 3: \n", sort)
+        return sort
     elif symbol is None or symbol == '':
-        top_industry(data, key)
+        return top_industry(data, key)
     else:
         industry_name = data[data[BASCIC_KEY] == symbol][key].drop_duplicates()
         values = industry_name.values
         if len(values) == 0:
             print('There is no data found for symbol ' + symbol)
-            return
+            return None
         elif isinstance(values, list) or isinstance(values, pd.Series) \
                 or isinstance(values, set) or isinstance(values, np.ndarray):
+            sort = pd.DataFrame()
             for value in values:
-                top_industry(data, key, value, None)
+                res = top_industry(data, key, value, None)
+                sort = sort.append(res)
+            return sort
 
 
 def get_finance_reports(years=4):
@@ -531,7 +558,7 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'rank', '2019-04-20', '2019-11-20', "600766", '黄金', 'industry')
+    # args = set_test_args(args, 'hot', '2019-04-20', '2019-11-20', "600766", '黄金', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -561,23 +588,26 @@ def run():
         return
     data = init_data_set(OUTPUT_DATA_FILE)
     data = get_industry_data(data, args.category)
+    res = None
     if args.methods == 'away51':
-        out = away51_top(data, args.end_date, key=args.category)
-        out.to_csv('away51top.csv')
+        res = away51_top(data, args.end_date, key=args.category)
+        res.to_csv('away51top.csv')
     elif args.methods == 'hot':
         hottest = find_vupu(data,args.end_date,key=args.category)
         inds = pd.Series.keys(hottest).values
-        rank_industry(data, inds, args.symbol, args.category)
+        res = rank_industry(data, inds, args.symbol, args.category)
     elif args.methods == 'rank':
         data = get_industry_data(data, args.category)
-        rank_industry(data, args.industry, args.symbol, args.category)
+        res = rank_industry(data, args.industry, args.symbol, args.category)
     elif args.methods == 'special':
-        find_special(data, args.end_date, key=args.category)
+        res = find_special(data, args.end_date, key=args.category)
     elif args.methods == 'ls':
-        high_long_short(data, args.end_date)
+        res = high_long_short(data, args.end_date)
     elif args.methods == 'analysis':
-        data = get_today_analysis(data, args.end_date, args.category)
-
+        res = get_today_analysis(data, args.end_date, args.category)
+    criteria = 30
+    cow = find_cow(criteria)
+    print('companies whose profits growth remain greater than ', criteria, '%')
 
 def high_long_short(data, end_date):
     high = find_high(data, end_date)

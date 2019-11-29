@@ -403,6 +403,21 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
 
 
 def get_finance_reports(years=4):
+    '''
+    :param years:
+    :return:
+        code,代码
+        name,名称
+        esp,每股收益
+        eps_yoy,每股收益同比(%)
+        bvps,每股净资产
+        roe,净资产收益率(%)
+        epcf,每股现金流量(元)
+        net_profits,净利润(万元)
+        profits_yoy,净利润同比(%)
+        distrib,分配方案
+        report_date,发布日期
+    '''
     reports = init_data_set(FINANCE_REPORTS_FILE)
     if reports is None:
         reports = pd.DataFrame()
@@ -608,6 +623,7 @@ def run():
     criteria = 30
     cow = find_cow(criteria)
     print('companies whose profits growth remain greater than ', criteria, '%')
+
 
 def high_long_short(data, end_date):
     high = find_high(data, end_date)

@@ -32,6 +32,7 @@ class YahooSpider(scrapy.Spider):
         self.fail = 0
         self.fail_symbols = []
         self.data = pd.DataFrame()
+        self.start_date = start_date
         self.end_date = end_date
 
         sutils.check_date_arg(start_date, 'startdate')
@@ -101,7 +102,7 @@ class YahooSpider(scrapy.Spider):
         return ''
 
     def closed(self, reason):
-        self.data.to_csv('yahoo'+self.end_date+'.csv')
+        self.data.to_csv('yahoo'+self.start_date+'_'+self.end_date+'.csv')
         pd.Series(self.fail_symbols).to_csv('yahoo_fail'+self.end_date+'.csv')
 
     def make_url(self, symbol, start_date=None, end_date=None):

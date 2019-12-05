@@ -402,6 +402,50 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
             return sort
 
 
+def get_qe():
+   '''
+    货币供应量
+    month: 统计时间
+    m2: 货币和准货币（广义货币M2）(亿元)
+    m2_yoy: 货币和准货币（广义货币M2）同比增长( %)
+    m1: 货币(狭义货币M1)(亿元)
+    m1_yoy: 货币(狭义货币M1)
+    同比增长( %)
+    m0: 流通中现金(M0)(亿元)
+    m0_yoy: 流通中现金(M0)
+    同比增长( %)
+    cd: 活期存款(亿元)
+    cd_yoy: 活期存款同比增长( %)
+    qm: 准货币(亿元)
+    qm_yoy: 准货币同比增长( %)
+    ftd: 定期存款(亿元)
+    ftd_yoy: 定期存款同比增长( %)
+    sd: 储蓄存款(亿元)
+    sd_yoy: 储蓄存款同比增长( %)
+    rests: 其他存款(亿元)
+    rests_yoy: 其他存款同比增长( %)
+
+    货币供应量(年底余额)
+
+    #    "" year :统计年度
+    # m2 :货币和准货币(亿元)
+    # m1:货币(亿元)
+    # m0:流通中现金(亿元)
+    # cd:活期存款(亿元)
+    # qm:准货币(亿元)
+    # ftd:定期存款(亿元)
+    # sd:储蓄存款(亿元)
+    # rests:其他存款(亿元)
+    #
+
+      :return:
+   '''
+   qe = ts.get_money_supply()
+   qe.to_csv('qe.csv')
+
+   year_qe = ts.get_money_supply_bal()
+   qe.to_csv('qe_year.csv')
+
 def get_finance_reports(years=4):
     '''
     :param years:

@@ -8,6 +8,7 @@ from scrapy.selector import Selector
 from scrapy.log import logging
 import pandas as pd
 import numpy as np
+import utils
 from scrapy.http import Request
 
 # Example data format:
@@ -28,6 +29,12 @@ class YahooSpider(scrapy.Spider):
         symbols_arg = kwargs.get('symbols')
         start_date = kwargs.get('startdate', '')
         end_date = kwargs.get('enddate', '')
+
+        if start_date is None or start_date == '':
+            start_date = utils.get_last_query_date()
+            start_date = start_date.replace('-','')
+        if end_date is None or end_date == '':
+            end_date = datetime.today().strftime('%Y%m%d')
         self.count = 0
         self.fail = 0
         self.fail_symbols = []
@@ -37,9 +44,6 @@ class YahooSpider(scrapy.Spider):
 
         sutils.check_date_arg(start_date, 'startdate')
         sutils.check_date_arg(end_date, 'enddate')
-
-        # symbols_arg = '/Users/chenay/pyt/pydata/pydata/allsymbols.csv'
-
         if symbols_arg:
             symbols_path = os.path.abspath(symbols_arg)
             if os.path.exists(symbols_path):
@@ -48,9 +52,10 @@ class YahooSpider(scrapy.Spider):
             else:
                 # inline symbols in command
                 symbols = symbols_arg.split(',')
-            self.start_urls = self.generate_urls(symbols, start_date, end_date)
         else:
-            self.start_urls = []
+            symbols_path = '/Users/chenay/pyt/pydata/pydata/allsymbols.csv'
+            symbols = sutils.load_symbols(symbols_path)
+        self.start_urls = self.generate_urls(symbols, start_date, end_date)
 
     # def make_requests_from_url(self, url):
     #     return Request(url, dont_filter=True, meta = {
@@ -131,4 +136,5 @@ class YahooSpider(scrapy.Spider):
 
 # from scrapy.cmdline import execute
 # execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180622 ".split())
+# execute("scrapy crawl yahoo".split())
 # execute("scrapy crawl yahoo -a symbols=600432.SS,600806.SS,000511.S -a startdate=20190419".split())

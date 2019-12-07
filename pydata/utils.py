@@ -67,7 +67,8 @@ def get_last_work_day(day):
     :return:
     the last work day of input day
     """
-    anchor = datetime.strptime(day, DATEFORMAT)
+    if day:
+        anchor = datetime.strptime(day, DATEFORMAT)
     now = anchor.isoweekday()
     if now > 4:
         off = now - 5

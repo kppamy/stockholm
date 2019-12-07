@@ -128,7 +128,7 @@ def find_vupu(data, bench, key='industry'):
     return hottest
 
 
-def find_cow(criteria):
+def find_cow(criteria=20):
     '''
     type: periods-numbe of periods
 
@@ -138,12 +138,14 @@ def find_cow(criteria):
     slices.drop_duplicates(inplace=True)
     thisyear = str(datetime.today().year)
     period = slices.period.astype('str').str
-    focus = slices[period.endswith('04') | period.startswith(thisyear)]
+    # focus = slices[period.endswith('04') | period.startswith(thisyear)]
+    focus = slices[period.endswith('04')]
     above = focus[focus.profits_yoy > criteria]
     good = above.groupby('code').count()
     import math
     # last four year year report , and the quarter report of this year
-    num = math.floor(datetime.today().month/3) + 4
+    # num = math.floor(datetime.today().month/3) + 4 - 1 # the delay delivery of financial report
+    num = 4
     cow = good[good.period == num]
     res = rp[rp.code.isin(cow.index)]
     codes = res[['code','name']].drop_duplicates()
@@ -525,10 +527,23 @@ def away51_top(data, bench, num=3, key='industry'):
     if res is not None:
         res.sort_values(by=key, inplace=True)
         # res.to_csv('away51top.csv')
-        print("*********************away51 top*****total = ", str(len(res)), "****************")
+        print("*********************away51 top "+str(num)+" in individual industries *****total = ",
+              str(len(res)), "****************")
         print(res.head())
     # print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     # res = res.sort('Industry')
+    return res
+
+
+def away51_cow(data, bench, criteria=10):
+    r51 = __away51(data, bench)
+    cow = find_cow(criteria)
+    if len(r51) > 0 and len(cow) > 0:
+        res = r51.merge(cow, on=MIN_HEAD)
+        sz = len(res)
+        print("******* cows who is below 51 size = ",str(sz))
+        if sz > 0:
+            print("\n", res.head())
     return res
 
 
@@ -536,9 +551,11 @@ def __append_list(list1, list2):
     return pd.concat([pd.Series(list1), pd.Series(list2)]).tolist()
 
 
-def __away51(m51, date):
-    r51 = m51[(m51.date == date) & (m51.close > (m51.ma51 * 1.1))]
-    # r51 = m51[(m51.date == date) & (m51.close < (m51.ma51 * 0.9))]
+def __away51(m51, date, bottom=True):
+    if not bottom:
+        r51 = m51[(m51.date == date) & (m51.close > (m51.ma51 * 1.1))]
+    else:
+        r51 = m51[(m51.date == date) & (m51.close < (m51.ma51 * 0.9))]
     # r51 = m51[((m51.close > (m51.ma51*1.1)) | (m51.close < (m51.ma51*0.9))) & (m51.date == date)]
     return r51
 
@@ -617,7 +634,9 @@ def run():
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
-    # args = set_test_args(args, 'hot', '2019-04-20', '2019-11-20', "600766", '黄金', 'industry')
+    print("==============startdate============= ", args.start_date)
+    print("==============enddate=============== ", args.end_date)
+    # args = set_test_args(args, 'hot', '2019-04-20', '2019-12-05', "600766", '黄金', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -652,11 +671,10 @@ def run():
         res = away51_top(data, args.end_date, key=args.category)
         res.to_csv('away51top.csv')
     elif args.methods == 'hot':
-        hottest = find_vupu(data,args.end_date,key=args.category)
+        hottest = find_vupu(data, args.end_date, key=args.category)
         inds = pd.Series.keys(hottest).values
-        res = rank_industry(data, inds, args.symbol, args.category)
+        res = rank_industry(data, inds, None, args.category)
     elif args.methods == 'rank':
-        data = get_industry_data(data, args.category)
         res = rank_industry(data, args.industry, args.symbol, args.category)
     elif args.methods == 'special':
         res = find_special(data, args.end_date, key=args.category)
@@ -664,9 +682,18 @@ def run():
         res = high_long_short(data, args.end_date)
     elif args.methods == 'analysis':
         res = get_today_analysis(data, args.end_date, args.category)
-    criteria = 30
-    cow = find_cow(criteria)
-    print('companies whose profits growth remain greater than ', criteria, '%')
+    cow = find_cow(5)
+    if len(res) > 0 and len(cow) > 0:
+        candi = res.merge(cow, on=MIN_HEAD)
+        print(" which is also a cow: \n", candi)
+
+
+
+def find_hottest_industry(data, end_date, category):
+    hottest = find_vupu(data, end_date, category)
+    inds = pd.Series.keys(hottest).values
+    res = rank_industry(data, inds, None, category)
+    return  res
 
 
 def high_long_short(data, end_date):
@@ -682,10 +709,18 @@ def high_long_short(data, end_date):
     return high
 
 
-def get_today_analysis(data, end_date, category ):
+def get_today_analysis(data, end_date, category):
     detail = get_industry_data(data, key=category)
     out = away51_top(detail, end_date, key=category)
+    acow = away51_cow(detail, end_date)
     special = find_special(detail, end_date, key=category)
+    cow = find_cow()
+    if cow is not None:
+        candidate = out.merge(cow, on=BASCIC_KEY)
+        sz = len(candidate)
+        print('\n\n************************* away51 & cow 20% growth  totals = ', sz)
+        if sz > 0:
+            print('\n', candidate.head())
     spe51 = pd.DataFrame()
     if special is not None:
         spe51 = out.merge(pd.DataFrame(special[BASCIC_KEY]), on=BASCIC_KEY)
@@ -694,12 +729,6 @@ def get_today_analysis(data, end_date, category ):
                   '**************************')
             print(spe51)
     hls = high_long_short(detail, end_date)
-    if len(spe51) > 0:
-        res = hls.merge(pd.DataFrame(spe51[BASCIC_KEY]), on=BASCIC_KEY)
-        print('\n\n************************* away51 & special & high & long  totals = ', len(res),
-              '**************************')
-        print(res)
-        return res
     return data
 
 

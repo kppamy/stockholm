@@ -3,7 +3,7 @@ import datetime
 
 def get_date_str(offset):
     if(offset is None):
-        offset = 0
+        offset = -1
     date_str = (datetime.datetime.today() + datetime.timedelta(days=offset)).strftime("%Y-%m-%d")
     return date_str
 

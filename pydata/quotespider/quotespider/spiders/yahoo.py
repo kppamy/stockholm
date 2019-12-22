@@ -9,6 +9,7 @@ from scrapy.log import logging
 import pandas as pd
 import numpy as np
 import utils
+import pconst
 from scrapy.http import Request
 
 # Example data format:
@@ -41,6 +42,7 @@ class YahooSpider(scrapy.Spider):
         self.data = pd.DataFrame()
         self.start_date = start_date
         self.end_date = end_date
+        self.__individuals = False
 
         sutils.check_date_arg(start_date, 'startdate')
         sutils.check_date_arg(end_date, 'enddate')
@@ -52,8 +54,9 @@ class YahooSpider(scrapy.Spider):
             else:
                 # inline symbols in command
                 symbols = symbols_arg.split(',')
+                self.__individuals = True
         else:
-            symbols_path = '/Users/chenay/pyt/pydata/pydata/allsymbols.csv'
+            symbols_path = pconst.SOURCE_DIR + 'allsymbols.csv'
             symbols = sutils.load_symbols(symbols_path)
         self.start_urls = self.generate_urls(symbols, start_date, end_date)
 
@@ -107,7 +110,12 @@ class YahooSpider(scrapy.Spider):
         return ''
 
     def closed(self, reason):
-        self.data.to_csv('yahoo'+self.start_date+'_'+self.end_date+'.csv')
+        path = pconst.SOURCE_DIR +'yahoo'+self.start_date+'_'+self.end_date
+        if not self.__individuals:
+            output = path +'.csv'
+        else:
+            output = path+'_selected'+'.csv'
+        self.data.to_csv(output)
         pd.Series(self.fail_symbols).to_csv('yahoo_fail'+self.end_date+'.csv')
 
     def make_url(self, symbol, start_date=None, end_date=None):
@@ -137,4 +145,4 @@ class YahooSpider(scrapy.Spider):
 # from scrapy.cmdline import execute
 # execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180622 ".split())
 # execute("scrapy crawl yahoo".split())
-# execute("scrapy crawl yahoo -a symbols=600432.SS,600806.SS,000511.S -a startdate=20190419".split())
+# execute("scrapy crawl yahoo -a symbols=000001.SS -a startdate=20150101".split())

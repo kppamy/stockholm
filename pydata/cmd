@@ -6,9 +6,8 @@ p3 strategy.py --methods=high
 p3 strategy.py --methods=finance
 p3 strategy.py --methods  --category area --industry 海南
 
-cd ~/pyt/pydata/pydata/quotespider/quotespider/spiders
 scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180522
 scrapy crawl yahoo -a symbols=600077.SS -a startdate=20180622
-scrapy crawl yahoo
+cd ~/pyt/pydata/pydata/quotespider/quotespider/spiders && scrapy crawl yahoo
 
  python3 grab.py --update today --startdate 2019-06-10

@@ -630,19 +630,19 @@ def set_test_args(args, method, start_date, end_date, symbol, industry, category
 
 
 def run():
+    start = timeit.default_timer()
     args = option.parser.parse_args()
     data = pd.DataFrame()
     args.start_date = get_last_query_date();
     args.end_date = get_last_work_day(args.end_date)
     print("==============startdate============= ", args.start_date)
     print("==============enddate=============== ", args.end_date)
-    # args = set_test_args(args, 'hot', '2019-04-20', '2019-12-05', "600766", '黄金', 'industry')
+    # args = set_test_args(args, 'basis', '2019-04-20', '2019-12-05', "600766", '黄金', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
         if not os.path.isfile(crawl_file_name):
             crawl_file_name = find_latest_input()
-    start = timeit.default_timer()
     if args.methods == 'basic':
         data = update_basics(crawl_file_name)
     elif args.methods == 'foundation':
@@ -682,6 +682,8 @@ def run():
         res = high_long_short(data, args.end_date)
     elif args.methods == 'analysis':
         res = get_today_analysis(data, args.end_date, args.category)
+    if res is None:
+        return
     cow = find_cow(5)
     if len(res) > 0 and len(cow) > 0:
         candi = res.merge(cow, on=MIN_HEAD)

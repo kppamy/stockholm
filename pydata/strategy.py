@@ -135,7 +135,7 @@ def find_cow(criteria=20):
     '''
     rp = init_data_set(FINANCE_REPORTS_FILE)
     slices = rp[['code', 'name', 'eps', 'net_profits', 'profits_yoy', 'period']]
-    slices.drop_duplicates(inplace=True)
+    slices = slices.drop_duplicates()
     thisyear = str(datetime.today().year)
     period = slices.period.astype('str').str
     # focus = slices[period.endswith('04') | period.startswith(thisyear)]
@@ -156,7 +156,7 @@ def find_fluctuate(data, bench):
     if data is None:
         data = init_data_set(OUTPUT_DATA_FILE)
     df = data[data.date == bench]
-    df.drop_duplicates(inplace=True)
+    df = df.drop_duplicates()
     col = [u'code', u'date']
     ab = df[(df.price_change > 6) | (df.price_change < -6)][col]
     ab['reason'] = '+_6%'
@@ -541,8 +541,8 @@ def away51_cow(data, bench, criteria=10):
     if len(r51) > 0 and len(cow) > 0:
         res = r51.merge(cow, on=MIN_HEAD)
         sz = len(res)
-        print("******* cows who is below 51 size = ",str(sz))
         if sz > 0:
+            print("******* cows who is below 51 size = ", str(sz))
             print("\n", res.head())
     return res
 
@@ -720,14 +720,14 @@ def get_today_analysis(data, end_date, category):
     if cow is not None:
         candidate = out.merge(cow, on=BASCIC_KEY)
         sz = len(candidate)
-        print('\n\n************************* away51 & cow 20% growth  totals = ', sz)
         if sz > 0:
+            print('\n\n************************* away51 & cow 20% growth  totals = ', sz)
             print('\n', candidate.head())
     spe51 = pd.DataFrame()
     if special is not None:
         spe51 = out.merge(pd.DataFrame(special[BASCIC_KEY]), on=BASCIC_KEY)
-        if spe51 is not None:
-            print('\n\n************************* away51 & special  totals = ', len(spe51),
+        if spe51 is not None and len(spe51) > 0:
+            print('\n\n************************* away51 & special  totals = ', len(spe51) ,
                   '**************************')
             print(spe51)
     hls = high_long_short(detail, end_date)

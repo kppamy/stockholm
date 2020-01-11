@@ -52,6 +52,21 @@ def init_data_set(input_file):
     return data
 
 
+def remove_incomplete_symbols(data):
+    KEY = 'code'
+    HEAD = [KEY, 'close']
+    ts = data.loc[:, HEAD]
+    tsc = ts.groupby(KEY).count()
+    db = tsc.describe()
+    maj = db.loc['25%', 'close']
+    mid = db.loc['50%', 'close']
+    if (mid - maj)/mid > 0.7:
+        good_symbols = tsc[tsc['close'] > maj].index
+    else:
+        good_symbols = tsc[tsc['close'] >= maj].index
+    return data.loc[data.code.isin(good_symbols)]
+
+
 def get_last_query_date():
     data = init_data_set(BASIC_DATA_FILE)
     pa = data.date.sort_values()
@@ -212,3 +227,7 @@ def unixTimestamp_trans(time):
 
 
 # read_scrapy_json('yahoo.json')
+
+# ba=init_data_set('basic20180621_20190628_notverygood.csv')
+# ts = remove_incomplete_symbols(ba)
+# print(ts)

@@ -110,13 +110,17 @@ class YahooSpider(scrapy.Spider):
         return ''
 
     def closed(self, reason):
-        path = pconst.SOURCE_DIR +'yahoo'+self.start_date+'_'+self.end_date
+        # path = pconst.SOURCE_DIR +'yahoo'+self.start_date+'_'+self.end_date
+        dts = self.data.date.drop_duplicates()
+        start = dts.min().replace('-','')
+        end = dts.max().replace('-','')
+        path = pconst.SOURCE_DIR + 'yahoo' + start + '_' + end
         if not self.__individuals:
             output = path +'.csv'
         else:
             output = path+'_selected'+'.csv'
         self.data.to_csv(output)
-        pd.Series(self.fail_symbols).to_csv('yahoo_fail'+self.end_date+'.csv')
+        pd.Series(self.fail_symbols).to_csv('yahoo_fail' + end + '.csv')
 
     def make_url(self, symbol, start_date=None, end_date=None):
         url = ('https://finance.yahoo.com/quote/%(symbol)s/history?'
@@ -145,4 +149,4 @@ class YahooSpider(scrapy.Spider):
 # from scrapy.cmdline import execute
 # execute("scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180622 ".split())
 # execute("scrapy crawl yahoo".split())
-# execute("scrapy crawl yahoo -a symbols=000001.SS -a startdate=20150101".split())
+# execute("scrapy crawl yahoo -a symbols=000001.SS".split())

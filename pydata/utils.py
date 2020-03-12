@@ -4,6 +4,7 @@
 import re
 from pconst import *
 import numpy as np
+import pconst
 
 
 def num2symbl(x):
@@ -76,10 +77,58 @@ def get_last_query_date():
     return last
 
 
+def clean_data_files(path='.', start='', end='', pattern='', mode ='range'):
+    '''
+    Merge all files is between start and end
+    :param start: short date str
+    :param end: short date str
+    :return:
+    '''
+    import os
+    files = [f for f in os.listdir(path) if re.match(r'(^crawl)|(^yahoo)', f)]
+    ff = []
+    if mode == 'match':
+        assert pattern != ''
+        ff = [f for f in files if f.find(pattern) != -1]
+    elif mode == 'range':
+        cps = 'crawl' + start
+        cpe = 'crawl' + end
+        yps = 'yahoo' + start
+        ype = 'yahoo' + end
+        ff = [f for f in files if ((f > cps) & (f < cpe)) | ((f > yps) & (f < ype))]
+    data = pd.DataFrame()
+    for f in ff:
+        res = init_data_set(path + '/' + f)
+        data = data.append(res)
+    if len(data) > 0:
+        data = data.drop_duplicates()
+        new = persist_data(data, path)
+        for f in ff:
+            if not new.endswith(f):
+                print('remove file ', f)
+                os.remove(path + '/'+f)
+
+
+def persist_data(data, path):
+    if 'date' not in data:
+        print('!!!!! input data frame doesn\'t contain \'date\'')
+        return
+    dts = data.date.drop_duplicates()
+    dts = dts.sort_values()
+    start = dts.iloc[0].strftime('%Y%m%d')
+    end = dts.iloc[-1].strftime('%Y%m%d')
+    if path.startswith('.'):
+        path = path[2:]
+    path = pconst.SOURCE_DIR + path + '/' + 'yahoo' + start + '_' + end + '.csv'
+    data.to_csv(path)
+    print('create new  file: ', path)
+    return path
+
+
 def get_last_work_day(day):
     """
     :param day:  target date, str type
-    :return:
+    :return: str
     the last work day of input day
     """
     if day:
@@ -231,3 +280,5 @@ def unixTimestamp_trans(time):
 # ba=init_data_set('basic20180621_20190628_notverygood.csv')
 # ts = remove_incomplete_symbols(ba)
 # print(ts)
+
+# clean_data_files(path='./data', pattern='2018', mode='match')

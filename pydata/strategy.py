@@ -448,6 +448,7 @@ def get_qe():
    year_qe = ts.get_money_supply_bal()
    qe.to_csv('qe_year.csv')
 
+
 def get_finance_reports(years=4):
     '''
     :param years:

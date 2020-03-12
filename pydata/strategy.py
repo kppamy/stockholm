@@ -454,7 +454,7 @@ def get_finance_reports(years=4):
     :return:
         code,代码
         name,名称
-        esp,每股收益
+        eps,每股收益
         eps_yoy,每股收益同比(%)
         bvps,每股净资产
         roe,净资产收益率(%)
@@ -464,9 +464,7 @@ def get_finance_reports(years=4):
         distrib,分配方案
         report_date,发布日期
     '''
-    reports = init_data_set(FINANCE_REPORTS_FILE)
-    if reports is None:
-        reports = pd.DataFrame()
+    reports = pd.DataFrame()
     thisyear = datetime.today().year
     for i in range(years):
         year = thisyear - i
@@ -524,7 +522,7 @@ def away51_top(data, bench, num=3, key='industry'):
     mkeys = __append_list(MIN_HEAD, [key])
     res = r51.merge(tops, on=mkeys)
     res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
-    if res is not None:
+    if res is not None and len(res) > 0:
         res.sort_values(by=key, inplace=True)
         # res.to_csv('away51top.csv')
         print("*********************away51 top "+str(num)+" in individual industries *****total = ",
@@ -538,6 +536,7 @@ def away51_top(data, bench, num=3, key='industry'):
 def away51_cow(data, bench, criteria=10):
     r51 = __away51(data, bench)
     cow = find_cow(criteria)
+    res = None
     if len(r51) > 0 and len(cow) > 0:
         res = r51.merge(cow, on=MIN_HEAD)
         sz = len(res)
@@ -637,7 +636,7 @@ def run():
     args.end_date = get_last_work_day(args.end_date)
     print("==============startdate============= ", args.start_date)
     print("==============enddate=============== ", args.end_date)
-    # args = set_test_args(args, 'basis', '2019-04-20', '2019-12-05', "600766", '黄金', 'industry')
+    # args = set_test_args(args, 'analysis', '2019-04-20', '2020-02-27', "600766", '黄金', 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -666,6 +665,7 @@ def run():
         return
     data = init_data_set(OUTPUT_DATA_FILE)
     data = get_industry_data(data, args.category)
+    data = data.dropna(subset=['open', 'close'])
     res = None
     if args.methods == 'away51':
         res = away51_top(data, args.end_date, key=args.category)
@@ -687,7 +687,9 @@ def run():
     cow = find_cow(5)
     if len(res) > 0 and len(cow) > 0:
         candi = res.merge(cow, on=MIN_HEAD)
-        print(" which is also a cow: \n", candi)
+        if 'code' in candi:
+            codes = candi[['code', 'name']].drop_duplicates()
+            # print(" which is also a cow: \n", codes)
 
 
 
@@ -712,10 +714,10 @@ def high_long_short(data, end_date):
 
 
 def get_today_analysis(data, end_date, category):
-    detail = get_industry_data(data, key=category)
-    out = away51_top(detail, end_date, key=category)
-    acow = away51_cow(detail, end_date)
-    special = find_special(detail, end_date, key=category)
+    data = get_industry_data(data, key=category)
+    out = away51_top(data, end_date, key=category)
+    acow = away51_cow(data, end_date)
+    special = find_special(data, end_date, key=category)
     cow = find_cow()
     if cow is not None:
         candidate = out.merge(cow, on=BASCIC_KEY)
@@ -730,7 +732,7 @@ def get_today_analysis(data, end_date, category):
             print('\n\n************************* away51 & special  totals = ', len(spe51) ,
                   '**************************')
             print(spe51)
-    hls = high_long_short(detail, end_date)
+    hls = high_long_short(data, end_date)
     return data
 
 

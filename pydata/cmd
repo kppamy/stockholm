@@ -1,9 +1,10 @@
-p3 strategy.py --methods=rank --symbol 002877 --category industry
-p3 strategy.py --methods=rank --industry 银行 --category industry
+p3 strategy.py --methods=rank  --symbol 002877
+p3 strategy.py --methods=rank  --industry 银行
 p3 strategy.py --methods=away51  --category industry
 p3 strategy.py --methods=special
 p3 strategy.py --methods=high
 p3 strategy.py --methods=finance
+p3 strategy.py --methods=report
 p3 strategy.py --methods  --category area --industry 海南
 
 scrapy crawl yahoo -a symbols=../../../allsymbols.csv -a startdate=20180522

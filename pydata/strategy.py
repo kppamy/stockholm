@@ -377,7 +377,7 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
     get industry rank order through a stock or through an industry
     symbol:string, the symbol of the code
     """
-    if industry_value is not None:
+    if industry_value is not None and len(industry_value) > 0:
         sort = pd.DataFrame()
         if isinstance(industry_value, (list, pd.Series, np.ndarray)):
             for value in industry_value:
@@ -401,6 +401,7 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
             for value in values:
                 res = top_industry(data, key, value, None)
                 sort = sort.append(res)
+            print(" %s top 3 of industry: \n", value, sort)
             return sort
 
 
@@ -551,7 +552,7 @@ def __append_list(list1, list2):
     return pd.concat([pd.Series(list1), pd.Series(list2)]).tolist()
 
 
-def __away51(m51, date, bottom=True):
+def __away51(m51, date, bottom=False):
     if not bottom:
         r51 = m51[(m51.date == date) & (m51.close > (m51.ma51 * 1.1))]
     else:
@@ -637,7 +638,7 @@ def run():
     args.end_date = get_last_work_day(args.end_date)
     print("==============startdate============= ", args.start_date)
     print("==============enddate=============== ", args.end_date)
-    # args = set_test_args(args, 'analysis', '2019-04-20', '2020-02-27', "600766", '黄金', 'industry')
+    # args = set_test_args(args, 'rank', '2020-04-09', '2020-04-09', "600195", None, 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -665,7 +666,7 @@ def run():
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
         return
     data = init_data_set(OUTPUT_DATA_FILE)
-    data = get_industry_data(data, args.category)
+    data = get_industry_data(data, key=args.category)
     data = data.dropna(subset=['open', 'close'])
     res = None
     if args.methods == 'away51':
@@ -677,6 +678,8 @@ def run():
         res = rank_industry(data, inds, None, args.category)
     elif args.methods == 'rank':
         res = rank_industry(data, args.industry, args.symbol, args.category)
+        if len(res) > 0:
+            res.to_csv('rank.csv')
     elif args.methods == 'special':
         res = find_special(data, args.end_date, key=args.category)
     elif args.methods == 'ls':

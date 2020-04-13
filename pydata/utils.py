@@ -153,6 +153,9 @@ def get_workdays(start, end):
 
 
 def clean_data(data):
+    if len(data) == 0:
+        print(" there is no data to clean !!!!!!!!!!!")
+        return
     if 'Unnamed: 0' in data:
         data = data.drop('Unnamed: 0', axis=1)
     if 'Unnamed: 0.1' in data:

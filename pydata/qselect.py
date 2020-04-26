@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime as dt
 
 import qutils.futils as fu
 
@@ -44,13 +45,14 @@ def get_interests(sf):
     return sf
 
 
-def get_acc_profites():
+def get_acc_profites(year=(dt.today().year - 1)):
     an = pd.read_csv('annual2000_2019.csv', dtype={'code': str, 'net_profits': float}, index_col=0)
     an.roe = an.roe.replace(np.NaN, 0)
-    an19 = an[an.period == 201904]
+    an19 = an[an.period == (year*100 + 4)]
     res = an[['code', 'net_profits']].groupby('code').sum()
     res.reset_index(inplace=True)
     res['roe'] = an19['roe']
+    res['netprof_new'] = an19['net_profits']
     return res
 
 
@@ -59,11 +61,12 @@ def get_interests_profits():
     profits = get_acc_profites()
     res = profits.merge(interests, on='code')
     res['accu_interests_profits'] = res.qinterests / (res.net_profits * 10000)
-    return res[['code', 'accu_interests_profits', 'roe']]
+    return res[['code', 'accu_interests_profits', 'roe', 'netprof_new']]
 
-def get_age():
+
+def get_basis():
     fd = pd.read_csv('fundamental.csv', dtype={'code': str})
-    res = fd[['code', 'timetomarket']].drop_duplicates()
+    res = fd[['code', 'timetomarket', 'pe', 'pb']].drop_duplicates()
     return res
 
 def select():
@@ -76,7 +79,7 @@ def select():
     # 上市时间 > 3年
     cash = get_cash_ability()
     generosity = get_interests_profits()
-    age = get_age()
+    age = get_basis()
     cand = cash.merge(generosity, on='code')
     res = cand.merge(age, on='code')
     target = res[(res.roe > 10)
@@ -85,7 +88,7 @@ def select():
                  & (res.free_cash > 0)
                  & (res.accu_interests_profits > 0.3)
                  & (res.timetomarket < 20170630) & (res.timetomarket > 0)]
-    target.to_csv('target.csv')
+    target.to_csv('targets.csv')
 
 # res=get_accu_interests()
 # print(res.head())

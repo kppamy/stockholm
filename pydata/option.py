@@ -26,7 +26,8 @@ _default = dict(
     updateone='N',
     symbol='',
     industry='',
-    category='industry'
+    category='industry',
+    subset=''
     )
 
 parser = argparse.ArgumentParser(description='A crawler and portfolio testing framework.')
@@ -66,10 +67,13 @@ parser.add_argument('--dbname', type=str, default=_default['db_name'], dest='db_
 parser.add_argument('--methods', type=str, default=_default['methods'], dest='methods', help='Target methods for back testing, Default: %s' % _default['methods'])
 parser.add_argument('--industry', type=str, default=_default['industry'], dest='industry', help='Target industry for analyzing, Default: %s' % _default['industry'])
 parser.add_argument('--category', type=str, default=_default['category'], dest='category', help='Rank category for analyzing: [Industry/Area/Concept] Default: %s' % _default['category'])
+parser.add_argument('--subset', type=str, default=_default['subset'], dest='subset', help='list of quotes to be analyzed %s' % _default['subset'])
+
 
 def main():
     args = parser.parse_args()
     print(args)
+
 
 if __name__ == '__main__':
     main()

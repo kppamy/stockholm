@@ -278,6 +278,13 @@ def unixTimestamp_trans(time):
     return value
 
 
+def backup_files(file):
+    import os
+    if os.path.isfile(file):
+        os.rename(file, file + '.bak')
+        print('backup file: ', file)
+
+
 # read_scrapy_json('yahoo.json')
 
 # ba=init_data_set('basic20180621_20190628_notverygood.csv')
@@ -285,3 +292,4 @@ def unixTimestamp_trans(time):
 # print(ts)
 
 # clean_data_files(path='./data', pattern='2018', mode='match')
+# merge_data_files('/Users/chenay/pyt/FinanceReportAnalysis/', 'finance_statement', dtype={'SECCODE':str})

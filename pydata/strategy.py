@@ -389,7 +389,7 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
         print(" %s top 3: \n", sort)
         return sort
     elif symbol is None or symbol == '':
-        return top_industry(data, key)
+        return top_industry(data, key, num=10)
     else:
         industry_name = data[data[BASCIC_KEY] == symbol][key].drop_duplicates()
         values = industry_name.values
@@ -673,6 +673,7 @@ def set_test_args(args, method, start_date, end_date, symbol, industry, category
     args.industry = industry
     args.end_date = end_date
     args.start_date = start_date
+    args.subset = 'targets.csv'
     return args
 
 
@@ -684,7 +685,7 @@ def run():
     args.end_date = get_last_work_day(args.end_date)
     print("==============startdate============= ", args.start_date)
     print("==============enddate=============== ", args.end_date)
-    # args = set_test_args(args, 'rank', '2020-04-09', '2020-04-09', "600195", None, 'industry')
+    # args = set_test_args(args, 'rank', '2020-04-09', '2020-04-24', None, None, 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -712,6 +713,10 @@ def run():
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
         return
     data = init_data_set(OUTPUT_DATA_FILE)
+    sub = args.subset
+    if sub != '':
+        quotes = pd.read_csv(sub, dtype={'code':str}, index_col=0)
+        data = data[data.code.isin(quotes.code)]
     data = get_industry_data(data, key=args.category)
     data = data.dropna(subset=['open', 'close'])
     res = None
@@ -724,7 +729,7 @@ def run():
         res = rank_industry(data, inds, None, args.category)
     elif args.methods == 'rank':
         res = rank_industry(data, args.industry, args.symbol, args.category)
-        if len(res) > 0:
+        if res is not None and len(res) > 0:
             res.to_csv('rank.csv')
     elif args.methods == 'special':
         res = find_special(data, args.end_date, key=args.category)
@@ -734,13 +739,16 @@ def run():
         res = get_today_analysis(data, args.end_date, args.category)
     if res is None:
         return
+    if sub != '':
+        res = res.merge(quotes, on='code')
+        res.to_csv('selected.csv', index=False)
+    print(res.head(10))
     cow = find_cow(5)
     if len(res) > 0 and len(cow) > 0:
         candi = res.merge(cow, on=MIN_HEAD)
         if 'code' in candi:
             codes = candi[['code', 'name']].drop_duplicates()
             # print(" which is also a cow: \n", codes)
-
 
 
 def find_hottest_industry(data, end_date, category):

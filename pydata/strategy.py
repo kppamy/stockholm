@@ -7,6 +7,7 @@ import tushare as ts
 from utils import *
 import numpy as np
 from datetime import datetime
+import math
 
 
 def __mark_single_quote(quote):
@@ -467,22 +468,67 @@ def get_finance_reports(years=4):
         report_date,发布日期
     '''
     reports = pd.DataFrame()
-    thisyear = datetime.today().year
+    td = datetime.today()
+    qt = math.ceil(td.month / 3)
+    thisyear = td.year
     for i in range(years):
         year = thisyear - i
         for quarter in range(4):
             try:
-                data = ts.get_report_data(year, quarter + 1)
-                data['period'] = str(year) + str(0) + str(quarter+1)
-                reports = reports.append(data)
-                print(" Get report year: " + str(year) + " quarter: " + str(quarter + 1))
+                if year != thisyear or quarter < qt:
+                    data = ts.get_report_data(year, quarter + 1)
+                    data['period'] = str(year) + str(0) + str(quarter+1)
+                    reports = reports.append(data)
+                    print(" Get report year: " + str(year) + " quarter: " + str(quarter + 1))
             except IOError:
                 print(" Network expection year: " + str(year) + " quarter: " + str(quarter+1))
                 continue
     if len(reports) > 0:
         reports = reports.sort_values(by=['code', 'period'], ascending=False)
         reports.drop_duplicates(inplace=True)
+        backup_files(FINANCE_REPORTS_FILE)
         reports.to_csv(FINANCE_REPORTS_FILE)
+    return reports
+
+
+def get_annual_finance_reports(years=10, eyear=None):
+    '''
+    :param years:
+    :return:
+        code,代码
+        name,名称
+        eps,每股收益
+        eps_yoy,每股收益同比(%)
+        bvps,每股净资产
+        roe,净资产收益率(%)
+        epcf,每股现金流量(元)
+        net_profits,净利润(万元)
+        profits_yoy,净利润同比(%)
+        distrib,分配方案
+        report_date,发布日期
+    '''
+    reports = pd.DataFrame()
+    if eyear is None:
+        end = datetime.today().year - 1
+    else:
+        end = eyear
+    for i in range(years):
+        year = end - i
+        try:
+                data = ts.get_report_data(year, 4)
+                data['period'] = str(year) + '04'
+                reports = reports.append(data)
+                print(" Get annual report year: " + str(year))
+        except IOError:
+            print(" Network excection year: " + str(year))
+            continue
+    if len(reports) > 0:
+        reports = reports.sort_values(by=['code', 'period'], ascending=False)
+        reports.drop_duplicates(inplace=True)
+        start = end - years + 1
+        path = ANNUAL_FINANCE_REPORTS_FILE+str(start)+'_'+str(end)+'.csv'
+        backup_files(path)
+        reports.to_csv(path)
     return reports
 
 
@@ -750,3 +796,4 @@ def update_basics(crawl_file):
 
 if __name__ == '__main__':
     run()
+    # get_annual_finance_reports(eyear=2009)

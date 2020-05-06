@@ -88,8 +88,10 @@ def clean_data_files(path='.', start='', end='', pattern='', mode ='range'):
     files = [f for f in os.listdir(path) if re.match(r'(^crawl)|(^yahoo)', f)]
     ff = []
     if mode == 'match':
-        assert pattern != ''
-        ff = [f for f in files if f.find(pattern) != -1]
+        if pattern == '':
+            ff = files
+        else:
+            ff = [f for f in files if f.find(pattern) != -1]
     elif mode == 'range':
         cps = 'crawl' + start
         cpe = 'crawl' + end
@@ -172,7 +174,8 @@ def clean_data(data):
         data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
         data.date = pd.to_datetime(data.date)
     data = data.fillna(method='ffill')
-    return data
+    res = data[(data.close != 0) & (data.open != 0)]
+    return res
 
 
 def complete_code(code):
@@ -285,11 +288,12 @@ def backup_files(file):
         print('backup file: ', file)
 
 
+
 # read_scrapy_json('yahoo.json')
 
 # ba=init_data_set('basic20180621_20190628_notverygood.csv')
 # ts = remove_incomplete_symbols(ba)
 # print(ts)
 
-# clean_data_files(path='./data', pattern='2018', mode='match')
+# clean_data_files(mode='match')
 # merge_data_files('/Users/chenay/pyt/FinanceReportAnalysis/', 'finance_statement', dtype={'SECCODE':str})

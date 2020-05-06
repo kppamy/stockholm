@@ -69,6 +69,17 @@ def get_basis():
     res = fd[['code', 'timetomarket', 'pe', 'pb']].drop_duplicates()
     return res
 
+
+def get_pledge_ration(ratio):
+    plg = pd.read_csv('/Users/chenay/pyt/eastmoney_spider/data/gpzyhgmx_20200419_20200425.csv', dtype={'证券代码': str})
+    plg[plg['质押比例（%）'] < ratio].head()
+    plg.columns
+    sub = plg[['统计日期', '证券代码', '质押比例（%）']]
+    sub.columns = ['querydate', 'code', 'pledge_ratio']
+    res = sub[sub.pledge_ratio < ratio]
+    return res
+
+
 def select():
     # roe > 10 %
     # 经营净现金流／净利润 > 0.6
@@ -88,11 +99,33 @@ def select():
                  & (res.free_cash > 0)
                  & (res.accu_interests_profits > 0.3)
                  & (res.timetomarket < 20170630) & (res.timetomarket > 0)]
+    plg = get_pledge_ration(30)
+    target = target.merge(plg, on='code')
     target.to_csv('targets.csv')
+
+
+def get_performance():
+    tt = pd.read_csv('basic.csv', index_col=0, dtype={'code': str})
+    if 'date' in tt.columns:
+        td = tt.set_index('date')
+    else:
+        td = tt
+    td.sort_index(inplace=True)
+    res = td.groupby('code').apply(get_chg)
+    res['date'] = td.index[-1]
+    return res
+
+
+def get_chg(quote):
+    quote['accu_chg'] = (quote['close'].iloc[-1] - quote['close'].iloc[0]) / quote['close'].iloc[0]
+    quote['accu_chg'] = (quote['close'].iloc[-1] - quote['close'].iloc[0]) / quote['close'].iloc[0]
+    return quote[['accu_chg', 'code']].iloc[-1]
 
 # res=get_accu_interests()
 # print(res.head())
 
 # get_acc_profites()
 
-select()
+# select()
+
+# res = get_performance()

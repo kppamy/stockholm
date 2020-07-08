@@ -174,8 +174,10 @@ def clean_data(data):
         data.date = data.date.apply(lambda x: x.replace(' 00:00:00.000000', ''))
         data.date = pd.to_datetime(data.date)
     data = data.fillna(method='ffill')
-    res = data[(data.close != 0) & (data.open != 0)]
-    return res
+    if 'close' in data and 'open' in data:
+        res = data[(data.close != 0) & (data.open != 0)]
+        return res
+    return data
 
 
 def complete_code(code):

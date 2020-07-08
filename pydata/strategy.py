@@ -49,8 +49,12 @@ def group_process(data, new=None):
         data = pd.concat((d1, new), ignore_index=True)
     data = data.drop_duplicates()
     data.to_csv(BASIC_DATA_FILE)
+    data.index.name = 'No'
     tmp = data.groupby(BASCIC_KEY).apply(__group_cal)
     tmp = __mark_single_quote(tmp)
+    if BASCIC_KEY in tmp.columns and BASCIC_KEY in tmp.index.names:
+        tmp.drop(BASCIC_KEY, axis=1, inplace=True)
+        tmp.reset_index(inplace=True)
     end = timeit.default_timer()
     print("basic group compute takes " + str(round(end - start)) + "s ")
     return tmp
@@ -685,7 +689,7 @@ def run():
     args.end_date = get_last_work_day(args.end_date)
     print("==============startdate============= ", args.start_date)
     print("==============enddate=============== ", args.end_date)
-    # args = set_test_args(args, 'rank', '2020-04-09', '2020-04-24', None, None, 'industry')
+    # args = set_test_args(args, 'report',args.start_date,args.end_date, None, None, 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -742,7 +746,7 @@ def run():
     if sub != '':
         res = res.merge(quotes, on='code')
         res.to_csv('selected.csv', index=False)
-    print(res.head(10))
+    #print(res.head(10))
     cow = find_cow(5)
     if len(res) > 0 and len(cow) > 0:
         candi = res.merge(cow, on=MIN_HEAD)

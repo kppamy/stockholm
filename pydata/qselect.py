@@ -93,14 +93,17 @@ def select():
     age = get_basis()
     cand = cash.merge(generosity, on='code')
     res = cand.merge(age, on='code')
+    plg = get_pledge_ration(100)
+    res =res.merge(plg, on='code')
+    res.to_csv('qselect.csv')
     target = res[(res.roe > 10)
                  & (res.netprofits2cash > 0.6)
                  & (res.debt_rights < 0.5)
                  & (res.free_cash > 0)
                  & (res.accu_interests_profits > 0.3)
-                 & (res.timetomarket < 20170630) & (res.timetomarket > 0)]
-    plg = get_pledge_ration(30)
-    target = target.merge(plg, on='code')
+                 & (res.timetomarket < 20170630)
+                 & (res.timetomarket > 0)
+                 & (res.pledge_ratio > 30)]
     target.to_csv('targets.csv')
 
 
@@ -113,19 +116,20 @@ def get_performance():
     td.sort_index(inplace=True)
     res = td.groupby('code').apply(get_chg)
     res['date'] = td.index[-1]
+    res.reset_index(inplace=True)
     return res
 
 
 def get_chg(quote):
     quote['accu_chg'] = (quote['close'].iloc[-1] - quote['close'].iloc[0]) / quote['close'].iloc[0]
     quote['accu_chg'] = (quote['close'].iloc[-1] - quote['close'].iloc[0]) / quote['close'].iloc[0]
-    return quote[['accu_chg', 'code']].iloc[-1]
+    return quote[['accu_chg']].iloc[-1]
 
 # res=get_accu_interests()
 # print(res.head())
 
 # get_acc_profites()
 
-# select()
+select()
 
 # res = get_performance()

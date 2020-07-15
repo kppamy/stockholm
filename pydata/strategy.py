@@ -60,6 +60,16 @@ def group_process(data, new=None):
     return tmp
 
 
+def cross_above(data):
+    # above = [False,True]
+    above = [True,True]
+    try:
+        if ((data.ma51 < data.close).values == above).all():
+            return data
+    except AttributeError:
+        print('code: ', data.index)
+
+
 def __read_csv(file):
     q = pd.read_csv(file)
     q = q.drop('Unnamed: 0', axis=1)
@@ -320,10 +330,10 @@ def top_industry(data, key='industry', value=None, num=3):
     marks = marks.reset_index()
     res = pd.DataFrame()
     res = marks.groupby(key, group_keys=False).apply(__sort_mark, num)
-    # if value is None:
-    #     res.to_csv('topall.csv')
-    # else:
-    #     res.to_csv('top' + '_' + value + '.csv')
+    if value is None:
+        res.to_csv('topall.csv')
+    else:
+        res.to_csv('top' + '_' + value + '.csv')
     return res
 
 
@@ -389,8 +399,7 @@ def rank_industry(data, industry_value=None, symbol=None, key='industry'):
                 res = top_industry(data, key, value)
                 sort = sort.append(res)
         elif isinstance(industry_value, str) and industry_value != '':
-            sort = top_industry(data, key, industry_value)
-        print(" %s top 3: \n", sort)
+            sort = top_industry(data, key, industry_value, num=-1)
         return sort
     elif symbol is None or symbol == '':
         return top_industry(data, key, num=10)
@@ -570,19 +579,46 @@ def basics_cal(all_quotes):
 
 def away51_top(data, bench, num=3, key='industry'):
     tops = top_industry(data, key, None, num)
-    r51 = __away51(data, bench)
     mkeys = __append_list(MIN_HEAD, [key])
+    interestd = ['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']
+    r51 = __away51(data, bench)
     res = r51.merge(tops, on=mkeys)
-    res = res[['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']]
+    res = res[interestd]
     if res is not None and len(res) > 0:
         res.sort_values(by=key, inplace=True)
-        # res.to_csv('away51top.csv')
-        print("*********************away51 top "+str(num)+" in individual industries *****total = ",
-              str(len(res)), "****************")
+        res.to_csv('away51top.csv')
+        # # print("*********************away51 top "+str(num)+" in individual industries *****total = ",
+        #       str(len(res)), "****************")
         print(res.head())
     # print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     # res = res.sort('Industry')
     return res
+
+
+def cross_top(data,bench, num=3, key='industry'):
+    tops = top_industry(data, key, None, num)
+    above = cross_above(data, bench)
+    if above is not None and len(above) > 0:
+        print(" cross above 51 today: ", above.code.values().to_string())
+        above.to_csv("above.csv")
+    mkeys = __append_list(MIN_HEAD, [key])
+    interestd = ['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']
+    cross = tops.merge(above, on=mkeys)
+    return cross
+
+
+def cross_below(data, bench, ma=51):
+    col = 'ma' + str(ma)
+    data['cross'] = data[col] < data.close
+    res = data[(data.cross.shift() == True) & (data.cross == False)]
+    return res[res.date == bench]
+
+
+def cross_above(data, bench, ma=51):
+    col = 'ma' + str(ma)
+    data['cross'] = data[col] < data.close
+    res = data[(data.cross.shift() == False) & (data.cross == True)]
+    return res[res.date == bench]
 
 
 def away51_cow(data, bench, criteria=10):
@@ -689,7 +725,7 @@ def run():
     args.end_date = get_last_work_day(args.end_date)
     print("==============startdate============= ", args.start_date)
     print("==============enddate=============== ", args.end_date)
-    # args = set_test_args(args, 'report',args.start_date,args.end_date, None, None, 'industry')
+    # args = set_test_args(args, 'rank',args.start_date,args.end_date, None, "银行", 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
@@ -716,17 +752,21 @@ def run():
            os.remove("tmpdata.csv")
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
         return
+
     data = init_data_set(OUTPUT_DATA_FILE)
-    sub = args.subset
-    if sub != '':
-        quotes = pd.read_csv(sub, dtype={'code':str}, index_col=0)
-        data = data[data.code.isin(quotes.code)]
+    min = (data.date.min().date()).strftime(DATEFORMAT)
+    max = (data.date.max().date()).strftime(DATEFORMAT)
+    print("\n\n ")
+    print("==============analysis time range============= ", min, "_______", max);
     data = get_industry_data(data, key=args.category)
     data = data.dropna(subset=['open', 'close'])
     res = None
     if args.methods == 'away51':
         res = away51_top(data, args.end_date, key=args.category)
         res.to_csv('away51top.csv')
+    if args.methods == 'cross':
+        res = cross_top(data, args.end_date, key=args.category)
+        res.to_csv('cross_top.csv')
     elif args.methods == 'hot':
         hottest = find_vupu(data, args.end_date, key=args.category)
         inds = pd.Series.keys(hottest).values
@@ -743,16 +783,20 @@ def run():
         res = get_today_analysis(data, args.end_date, args.category)
     if res is None:
         return
+    sub = args.subset
     if sub != '':
-        res = res.merge(quotes, on='code')
-        res.to_csv('selected.csv', index=False)
-    #print(res.head(10))
-    cow = find_cow(5)
-    if len(res) > 0 and len(cow) > 0:
-        candi = res.merge(cow, on=MIN_HEAD)
-        if 'code' in candi:
-            codes = candi[['code', 'name']].drop_duplicates()
-            # print(" which is also a cow: \n", codes)
+        merge(res, sub)
+    res = merge(res, 'qselect.csv')
+    cols = ['code','name', 'mark', 'netprofits2cash', 'free_cash', 'roe', 'accu_chg']
+    print(res[cols])
+
+
+def merge(data, file):
+    quotes = pd.read_csv(file, dtype={'code': str}, index_col=0)
+    res = data.merge(quotes, on='code')
+    print(" merge: \n", file)
+    res.to_csv('selected_'+file, index=False)
+    return res
 
 
 def find_hottest_industry(data, end_date, category):
@@ -778,6 +822,7 @@ def high_long_short(data, end_date):
 def get_today_analysis(data, end_date, category):
     data = get_industry_data(data, key=category)
     out = away51_top(data, end_date, key=category)
+    cross = cross_top(data, end_date, key=category)
     acow = away51_cow(data, end_date)
     special = find_special(data, end_date, key=category)
     cow = find_cow()

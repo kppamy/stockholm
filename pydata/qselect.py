@@ -90,11 +90,17 @@ def select():
     # 上市时间 > 3年
     cash = get_cash_ability()
     generosity = get_interests_profits()
-    age = get_basis()
     cand = cash.merge(generosity, on='code')
+
+    age = get_basis()
     res = cand.merge(age, on='code')
+
     plg = get_pledge_ration(100)
     res =res.merge(plg, on='code')
+
+    per = get_performance()
+    res =res.merge(per, on='code')
+
     res.to_csv('qselect.csv')
     target = res[(res.roe > 10)
                  & (res.netprofits2cash > 0.6)
@@ -117,6 +123,7 @@ def get_performance():
     res = td.groupby('code').apply(get_chg)
     res['date'] = td.index[-1]
     res.reset_index(inplace=True)
+    res.to_csv('general_performance.csv')
     return res
 
 
@@ -132,4 +139,3 @@ def get_chg(quote):
 
 select()
 
-# res = get_performance()

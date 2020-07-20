@@ -8,6 +8,7 @@ from utils import *
 import numpy as np
 from datetime import datetime
 import math
+from qselect import  *
 
 
 def __mark_single_quote(quote):
@@ -37,6 +38,7 @@ def __group_cal(df):
     df['ma20' ] = df['close'].rolling(20).mean()
     df['ma30'] = df['close'].rolling(30).mean()
     df['price_chg_aggr'] = df['price_change'].rolling(3).sum()
+    df['accu_chg'] = df['price_change'].sum()
     df['max'] = df.close.max()
     df.fillna(method='ffill', inplace=True)
     return df
@@ -50,11 +52,11 @@ def group_process(data, new=None):
     data = data.drop_duplicates()
     data.to_csv(BASIC_DATA_FILE)
     data.index.name = 'No'
-    tmp = data.groupby(BASCIC_KEY).apply(__group_cal)
+    tmp = data.groupby(BASCIC_KEY, group_keys=False).apply(__group_cal)
     tmp = __mark_single_quote(tmp)
-    if BASCIC_KEY in tmp.columns and BASCIC_KEY in tmp.index.names:
-        tmp.drop(BASCIC_KEY, axis=1, inplace=True)
-        tmp.reset_index(inplace=True)
+    # if BASCIC_KEY in tmp.columns and BASCIC_KEY in tmp.index.names:
+    #     tmp.drop(BASCIC_KEY, axis=1, inplace=True)
+    #     tmp.reset_index(inplace=True)
     end = timeit.default_timer()
     print("basic group compute takes " + str(round(end - start)) + "s ")
     return tmp
@@ -125,7 +127,9 @@ def find_special(data, bench, key):
         print("****************Every thing is smooth today***************\n")
         return tops
     else:
-        special = pd.merge(tops[[BASCIC_KEY, 'mark']], fluc[[BASCIC_KEY, 'reason']], on=BASCIC_KEY)
+        col1 = __append_list(MIN_HEAD, 'mark')
+        col2 = __append_list(MIN_HEAD, 'reason')
+        special = pd.merge(tops[col1], fluc[col2], on=MIN_HEAD)
         special.drop_duplicates(inplace=True)
         print("*********************what's special today**********:\n", special)
         return special
@@ -172,7 +176,7 @@ def find_fluctuate(data, bench):
         data = init_data_set(OUTPUT_DATA_FILE)
     df = data[data.date == bench]
     df = df.drop_duplicates()
-    col = [u'code', u'date']
+    col = [u'code', u'date', u'name']
     ab = df[(df.price_change > 6) | (df.price_change < -6)][col]
     ab['reason'] = '+_6%'
     vh = df[(df.volume > (df.v6 * 3)) & (df.price_change > 0)][col]
@@ -204,11 +208,11 @@ def _concat_column(df, key):
 
 def find_high(data, bench, atr=3):
     df = data[data.date == bench]
-    col = [u'code', u'date']
+    col = [u'code', u'name', u'date']
     high = df[((df['max'] - df.close) / df['max']) < (atr / 100)][col]
-    high['reason'] = 'no more than ' + str(atr) + '% away from max'
+    high['reason'] = '- ' + str(atr) + '%  max'
     top = top_industry(data, 'industry', None)
-    res = high.merge(top[[BASCIC_KEY]], on=BASCIC_KEY)
+    res = high.merge(top[MIN_HEAD], on=MIN_HEAD)
     res.drop_duplicates(inplace=True)
     print('\n\n************************* high   totals = ', str(len(res)),   '**************************')
     print(res.head())
@@ -237,7 +241,8 @@ def __special_top(special):
 def __is_long(day, data):
     df = data[data['date'] == day]
     lg = df[(df.close > df.ma5) & (df.ma5 > df.ma20) & (df.ma20 > df.ma30) & (df.ma30 > df.ma51)]
-    lg = lg[[BASCIC_KEY, 'industry']]
+    col = __append_list(MIN_HEAD, ['industry'])
+    lg = lg[col]
     lg = lg.groupby(BASCIC_KEY).apply(_concat_column, 'industry')
     if len(lg) > 0:
         lg.loc[:, 'reason'] = 'long array'
@@ -248,7 +253,8 @@ def __is_long(day, data):
 def __is_short(day, data):
     df = data[data['date'] == day]
     st = df[(df.close < df.ma5) & (df.ma5 < df.ma20) & (df.ma20 < df.ma30) & (df.ma30 < df.ma51)]
-    st = st[[BASCIC_KEY, 'industry']]
+    col = __append_list(MIN_HEAD, ['industry'])
+    st = st[col]
     st = st.groupby(BASCIC_KEY).apply(_concat_column, 'industry')
     if len(st) > 0:
         st.loc[:, 'reason'] = 'short array'
@@ -587,9 +593,10 @@ def away51_top(data, bench, num=3, key='industry'):
     if res is not None and len(res) > 0:
         res.sort_values(by=key, inplace=True)
         res.to_csv('away51top.csv')
-        # # print("*********************away51 top "+str(num)+" in individual industries *****total = ",
-        #       str(len(res)), "****************")
+        print("\n*********************away51 top "+str(num)+" in individual industries *****total = ",
+              str(len(res)), "****************")
         print(res.head())
+        print('\n')
     # print("top "+str(n)+" industry and far away from the 51 MA:\n",res.head())
     # res = res.sort('Industry')
     return res
@@ -599,7 +606,7 @@ def cross_top(data,bench, num=3, key='industry'):
     tops = top_industry(data, key, None, num)
     above = cross_above(data, bench)
     if above is not None and len(above) > 0:
-        print(" cross above 51 today: ", above.code.values().to_string())
+        print(" cross above 51 today:\n ", above.name.values)
         above.to_csv("above.csv")
     mkeys = __append_list(MIN_HEAD, [key])
     interestd = ['date', 'close', 'code', 'name', key, 'ma51', 'mark_y']
@@ -717,48 +724,31 @@ def set_test_args(args, method, start_date, end_date, symbol, industry, category
     return args
 
 
-def run():
+def update_data(args):
     start = timeit.default_timer()
-    args = option.parser.parse_args()
-    data = pd.DataFrame()
-    args.start_date = get_last_query_date();
-    args.end_date = get_last_work_day(args.end_date)
-    print("==============startdate============= ", args.start_date)
-    print("==============enddate=============== ", args.end_date)
-    # args = set_test_args(args, 'rank',args.start_date,args.end_date, None, "银行", 'industry')
     crawl_file_name = 'crawl' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
     if not os.path.isfile(crawl_file_name):
         crawl_file_name = 'yahoo' + args.start_date.replace('-', '') + '_' + args.end_date.replace('-', '') + '.csv'
         if not os.path.isfile(crawl_file_name):
             crawl_file_name = find_latest_input()
     if args.methods == 'basic':
-        data = update_basics(crawl_file_name)
-    elif args.methods == 'foundation':
-        data = init_data_set(OUTPUT_DATA_FILE)
-        data = get_industry_data(data, key=args.category)
+        update_basics(crawl_file_name)
     elif args.methods == 'finance':
         get_finance_reports()
-        return
     elif args.methods == 'concept':
         update_concept()
-        return
     elif args.methods == 'report':
-        data = update_basics(crawl_file_name)
-        data.to_csv('tmpdata.csv')
-        data = get_today_analysis(data, args.end_date, args.category)
-    if data is not None and len(data) != 0:
-        data.to_csv(OUTPUT_DATA_FILE)
-        if os.path.isfile("tmpdata.csv"):
-           os.remove("tmpdata.csv")
+        grouped = update_basics(crawl_file_name)
+        data = get_today_analysis(grouped, args.end_date, args.category)
+        if data is not None and len(data) != 0:
+            data.to_csv('industry+'+OUTPUT_DATA_FILE)
+            evaluation(args,grouped,data)
         print(' takes ' + str(timeit.default_timer() - start) + ' s to finish all operation')
-        return
 
-    data = init_data_set(OUTPUT_DATA_FILE)
-    min = (data.date.min().date()).strftime(DATEFORMAT)
-    max = (data.date.max().date()).strftime(DATEFORMAT)
-    print("\n\n ")
-    print("==============analysis time range============= ", min, "_______", max);
-    data = get_industry_data(data, key=args.category)
+
+def replay(args):
+    initial = init_data_set(OUTPUT_DATA_FILE)
+    data = get_industry_data(initial, key=args.category)
     data = data.dropna(subset=['open', 'close'])
     res = None
     if args.methods == 'away51':
@@ -781,21 +771,55 @@ def run():
         res = high_long_short(data, args.end_date)
     elif args.methods == 'analysis':
         res = get_today_analysis(data, args.end_date, args.category)
-    if res is None:
-        return
+    if res is not None:
+        evaluation(args, initial, res)
+
+
+def evaluation(args, input, output):
+    min = (input.date.min().date()).strftime(DATEFORMAT)
+    max = (input.date.max().date()).strftime(DATEFORMAT)
+    print("\n\n ")
+    print("==============replay time range============= ", min, "_______", max)
+    selected = select_overview()
+    selected = selected.merge((input[['code', ACCU_PRICE_CHANGE, 'date']][input.date == max]), on='code')
     sub = args.subset
     if sub != '':
-        merge(res, sub)
-    res = merge(res, 'qselect.csv')
-    cols = ['code','name', 'mark', 'netprofits2cash', 'free_cash', 'roe', 'accu_chg']
-    print(res[cols])
+        merge(output, sub)
+    if ACCU_PRICE_CHANGE in output.columns:
+        output = merge(output, selected, ['code', ACCU_PRICE_CHANGE])
+    else:
+        output = merge(output, selected)
+    head = ['code', 'name', 'industry', 'netprofits2cash', 'free_cash','debt_rights', 'pe',ACCU_PRICE_CHANGE]
+    if 'reason' in output.columns:
+        cols = head + ['reason']
+    else:
+        cols = head
+    output.sort_values(by=['industry'],inplace=True)
+    output.to_csv(args.methods+'.csv')
+    print(output[cols])
 
 
-def merge(data, file):
-    quotes = pd.read_csv(file, dtype={'code': str}, index_col=0)
-    res = data.merge(quotes, on='code')
-    print(" merge: \n", file)
-    res.to_csv('selected_'+file, index=False)
+def run():
+    args = option.parser.parse_args()
+    args.start_date = get_last_query_date()
+    args.end_date = get_last_work_day(args.end_date)
+    print("==============startdate============= ", args.start_date)
+    print("==============enddate=============== ", args.end_date)
+    # args = set_test_args(args, 'analysis', args.start_date, args.end_date, "002807", None, 'industry')
+    update_data(args)
+    replay(args)
+
+
+def merge(first, second, keys=None):
+    if isinstance(second, str):
+        quotes = pd.read_csv(second, dtype={'code': str}, index_col=0)
+        print(" merge: \n", second)
+    elif isinstance(second, pd.DataFrame):
+        quotes = second
+    if keys is not None:
+        res = first.merge(quotes, on=keys)
+    else:
+        res = first.merge(quotes, on='code')
     return res
 
 
@@ -811,7 +835,7 @@ def high_long_short(data, end_date):
     ls = find_long_short(data, end_date)
     if ls is not None:
         # ls.index.names = ['index1', 'index2']
-        both = high.merge(pd.DataFrame(ls[BASCIC_KEY]), on=BASCIC_KEY)
+        both = high.merge(pd.DataFrame(ls[MIN_HEAD]), on=MIN_HEAD)
         print('\n\n************************* high & long  totals = ', len(both), '**************************')
         # both.to_csv('high_long_short.csv')
         print(both.head())
@@ -822,11 +846,13 @@ def high_long_short(data, end_date):
 def get_today_analysis(data, end_date, category):
     data = get_industry_data(data, key=category)
     out = away51_top(data, end_date, key=category)
+    out['reason'] = 'away51_top'
     cross = cross_top(data, end_date, key=category)
-    acow = away51_cow(data, end_date)
+    cross['reason'] = 'cross_top'
+    cow = away51_cow(data, end_date)
     special = find_special(data, end_date, key=category)
     cow = find_cow()
-    if cow is not None:
+    if cow is not None and len(cow) > 1:
         candidate = out.merge(cow, on=BASCIC_KEY)
         sz = len(candidate)
         if sz > 0:
@@ -840,7 +866,12 @@ def get_today_analysis(data, end_date, category):
                   '**************************')
             print(spe51)
     hls = high_long_short(data, end_date)
-    return data
+    col = __append_list(MIN_HEAD,['reason'])
+    res = pd.concat([out[col], cross[col], special[col],hls[col]]).sort_values(
+        by='code')
+    res = res.groupby(BASCIC_KEY, group_keys=False).apply(_concat_column, key='reason')
+    res = res.merge(data[data.date == end_date],on=MIN_HEAD)
+    return res
 
 
 def update_basics(crawl_file):
@@ -848,6 +879,7 @@ def update_basics(crawl_file):
     data = init_data_set(BASIC_DATA_FILE)
     new = init_data_set(crawl_file)
     data = group_process(data, new)
+    data.to_csv(OUTPUT_DATA_FILE)
     return data
 
 

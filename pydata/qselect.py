@@ -5,6 +5,9 @@ from datetime import datetime as dt
 import qutils.futils as fu
 
 
+QFINANCE = 'qfinance.csv'
+ACCU_PRICE_CHANGE= 'accu_chg'
+
 def get_cash_ability():
     '''
     :return:
@@ -80,7 +83,19 @@ def get_pledge_ration(ratio):
     return res
 
 
-def select():
+def get_basic_finance():
+    cash = get_cash_ability()
+    generosity = get_interests_profits()
+    cand = cash.merge(generosity, on='code')
+    age = get_basis()
+    res = cand.merge(age, on='code')
+    plg = get_pledge_ration(100)
+    res = res.merge(plg, on='code')
+    res.to_csv(QFINANCE)
+    return res
+
+
+def select_cow(data):
     # roe > 10 %
     # 经营净现金流／净利润 > 0.6
     # 有息负债／股东权益 < 50 %
@@ -88,33 +103,35 @@ def select():
     # 自由现金流 > 0
     # 累计分红／累计净利润 > 30 %
     # 上市时间 > 3年
-    cash = get_cash_ability()
-    generosity = get_interests_profits()
-    cand = cash.merge(generosity, on='code')
-
-    age = get_basis()
-    res = cand.merge(age, on='code')
-
-    plg = get_pledge_ration(100)
-    res =res.merge(plg, on='code')
-
-    per = get_performance()
-    res =res.merge(per, on='code')
-
-    res.to_csv('qselect.csv')
-    target = res[(res.roe > 10)
-                 & (res.netprofits2cash > 0.6)
-                 & (res.debt_rights < 0.5)
-                 & (res.free_cash > 0)
-                 & (res.accu_interests_profits > 0.3)
-                 & (res.timetomarket < 20170630)
-                 & (res.timetomarket > 0)
-                 & (res.pledge_ratio > 30)]
+    target = data[(data.roe > 10)
+                  & (data.netprofits2cash > 0.6)
+                  & (data.debt_rights < 0.5)
+                  & (data.free_cash > 0)
+                  & (data.accu_interests_profits > 0.3)
+                  & (data.timetomarket < 20170630)
+                  & (data.timetomarket > 0)
+                  & (data.pledge_ratio > 30)]
     target.to_csv('targets.csv')
+    return target
 
 
-def get_performance():
-    tt = pd.read_csv('basic.csv', index_col=0, dtype={'code': str})
+def select_overview(update=False):
+    import os
+    if os.path.isfile(QFINANCE) and not update:
+        res = pd.read_csv(QFINANCE, index_col=0, dtype={'code': str})
+    else:
+        res = get_basic_finance()
+    if update:
+        select_cow(res)
+    res.to_csv('qselect.csv')
+    return res
+
+
+def get_performance(data):
+    if data is None:
+        tt = pd.read_csv('basic.csv', index_col=0, dtype={'code': str})
+    else:
+        tt = data
     if 'date' in tt.columns:
         td = tt.set_index('date')
     else:
@@ -137,5 +154,5 @@ def get_chg(quote):
 
 # get_acc_profites()
 
-select()
+# select()
 

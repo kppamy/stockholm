@@ -1,3 +1,6 @@
+import numpy.random as random
+
+
 class Solution(object):
     # 26. Remove Duplicates from Sorted Array
     def removeDuplicates(self, nums):
@@ -15,8 +18,40 @@ class Solution(object):
                 nums[slow] = nums[fast]
         return slow + 1
 
+    # 11. Container With Most Water
+    def maxArea(self, height):
+        """
+        :type height: List[int]
+        :rtype: int
+        """
+        left = 0
+        right = len(height) - 1
+        are = lambda x, y: (y - x) * min(height[y], height[x])
+        maxa = 0
+        while left < right:
+            maxa = max(maxa, are(left, right))
+            if height[left] < height[right]:
+                left = left + 1
+            else:
+                right = right - 1
+        return maxa
+
+    def generate_random_array(self):
+        arr0 = [1, 8, 6, 2, 5, 4, 8, 3, 7]
+        arr1 = [1, 2, 3]
+        arr2 = [3, 2, 1]
+        arr3 = random.random_integers(-1, 10, 6)
+        return [arr0, arr3, arr1, arr2]
+
+    def format_test_area(self, func):
+        cases = self.generate_random_array()
+        for case in cases:
+            print(case)
+            size = func(case)
+            print(func.__name__ + " res: " + str(size))
+
     def format_test(self):
-        cases = self.generate_sortedArray()
+        cases = self.generate_sort()
         for case in cases:
             print(case)
             size = self.removeDuplicates(case)
@@ -35,4 +70,5 @@ class Solution(object):
 
 if __name__ == '__main__':
     solution = Solution()
-    solution.format_test()
+    # solution.format_test()
+    solution.format_test_area(solution.maxArea)

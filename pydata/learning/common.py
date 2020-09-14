@@ -20,7 +20,7 @@ def generate_inputs():
     return [s1, s2, s3]
 
 
-def format_test(func, inputs_func=None):
+def format_test(func, inputs_func=None, print_func=None):
     if inputs_func is not None:
         cases = inputs_func()
     else:
@@ -28,8 +28,11 @@ def format_test(func, inputs_func=None):
     for case in cases:
         res = func(case[0], case[1])
         print(case)
-        if isinstance(res, int):
-            print(func.__name__ + " :" + str(res))
+        print(func.__name__ + ":")
+        if print_func is not None:
+            print_func(res)
         else:
-            print(func.__name__ + ":")
-            print(res)
+            if isinstance(res, int):
+                print(str(res))
+            else:
+                print(res)

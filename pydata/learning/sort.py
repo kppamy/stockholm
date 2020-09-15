@@ -23,10 +23,12 @@ class Sort:
     # Runtime: 60 ms, faster than 37.50% of Python3 online submissions for Intersection of Two Arrays.
     # Memory Usage: 13.8 MB, less than 93.37% of Python3 online submissions for Intersection of Two Arrays.
     def intersection(self, nums1: List[int], nums2: List[int]) -> List[int]:
-        if nums1 == [] or nums2 == []:
-            return []
-        if nums1 is None or nums2 is None:
-            return []
+        # after remove empty check:
+        # Runtime: 60ms-->48 ms, 37.5%--> 65.59%
+        # if nums1 == [] or nums2 == []:
+        #     return []
+        # if nums1 is None or nums2 is None:
+        #     return []
         dc = {val: i for i, val in enumerate(nums1)}
         dupl = [item for item in nums2 if dc.get(item) is not None]
         res = []

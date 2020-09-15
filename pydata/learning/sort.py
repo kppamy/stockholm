@@ -22,7 +22,7 @@ class Sort:
     # 349. Intersection of Two Arrays
     # Runtime: 60 ms, faster than 37.50% of Python3 online submissions for Intersection of Two Arrays.
     # Memory Usage: 13.8 MB, less than 93.37% of Python3 online submissions for Intersection of Two Arrays.
-    def intersection(self, nums1: List[int], nums2: List[int]) -> List[int]:
+    def intersectionH(self, nums1: List[int], nums2: List[int]) -> List[int]:
         # after remove empty check:
         # Runtime: 60ms-->48 ms, 37.5%--> 65.59%
         # if nums1 == [] or nums2 == []:
@@ -34,6 +34,16 @@ class Sort:
         res = []
         [res.extend([item]) for item in dupl if item not in res]
         return res
+
+    # 349. Intersection of Two Arrays
+    #Runtime: 56 ms, faster than 41.69% of Python3 online submissions for Intersection of Two Arrays.
+    # Memory Usage: 14 MB, less than 46.13% of Python3 online submissions for Intersection of Two Arrays.
+    def intersection(self, nums1: List[int], nums2: List[int]) -> List[int]:
+        dc = {val: 1 for val in nums1}
+        for item in nums2:
+            if dc.get(item) is not None and dc[item] == 1:
+                dc[item] = dc[item] + 1
+        return [key for key in dc if dc[key] == 2]
 
     def generate_two_arr(self):
         nums1 = [1, 2, 2, 1]

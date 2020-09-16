@@ -46,7 +46,9 @@ class Sort:
         return [key for key in dc if dc[key] == 2]
 
     # 1122. Relative Sort Array
-    def relativeSortArray(self, arr1: List[int], arr2: List[int]) -> List[int]:
+    # Runtime: 44 ms, faster than 52.86% of Python3 online submissions for Relative Sort Array.
+    # Memory Usage: 13.7 MB, less than 96.16% of Python3 online submissions for Relative Sort Array.
+    def relativeSortArrayHash(self, arr1: List[int], arr2: List[int]) -> List[int]:
         dc = {}
         for item in arr1:
             if item in dc:
@@ -62,6 +64,25 @@ class Sort:
         # res.extend([item] * dc[item] for item in keys)
         for item in keys:
             res.extend([item] * dc[item])
+        return res
+
+    # 1122. Relative Sort Array
+    # Runtime: 48 ms, faster than 44.30% of Python3 online submissions for Relative Sort Array.
+    # Memory Usage: 13.8 MB, less than 89.66% of Python3 online submissions for Relative Sort Array.
+    def relativeSortArray(self, arr1: List[int], arr2: List[int]) -> List[int]:
+        if not bool(arr1):
+            return []
+        maxv = max(arr1)
+        counter = [0] * (maxv + 1)
+        for item in arr1:
+            counter[item] = counter[item] + 1
+        res = []
+        for item in arr2:
+            res.extend([item] * counter[item])
+            counter[item] = 0
+        for i, val in enumerate(counter):
+            if val > 0:
+                res.extend([i] * val)
         return res
 
     def generate_relative_sort_arr(self):

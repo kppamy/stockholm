@@ -36,7 +36,7 @@ class Sort:
         return res
 
     # 349. Intersection of Two Arrays
-    #Runtime: 56 ms, faster than 41.69% of Python3 online submissions for Intersection of Two Arrays.
+    # Runtime: 56 ms, faster than 41.69% of Python3 online submissions for Intersection of Two Arrays.
     # Memory Usage: 14 MB, less than 46.13% of Python3 online submissions for Intersection of Two Arrays.
     def intersection(self, nums1: List[int], nums2: List[int]) -> List[int]:
         dc = {val: 1 for val in nums1}
@@ -44,6 +44,31 @@ class Sort:
             if dc.get(item) is not None and dc[item] == 1:
                 dc[item] = dc[item] + 1
         return [key for key in dc if dc[key] == 2]
+
+    # 1122. Relative Sort Array
+    def relativeSortArray(self, arr1: List[int], arr2: List[int]) -> List[int]:
+        dc = {}
+        for item in arr1:
+            if item in dc:
+                dc[item] = dc[item] + 1
+            else:
+                dc[item] = 1
+        res = []
+        for item in arr2:
+            res.extend([item] * dc[item])
+            del (dc[item])
+        keys = sorted(dc)
+        # this is add list instead of items original list
+        # res.extend([item] * dc[item] for item in keys)
+        for item in keys:
+            res.extend([item] * dc[item])
+        return res
+
+    def generate_relative_sort_arr(self):
+        arr1 = [2, 3, 1, 3, 2, 4, 6, 7, 9, 2, 19]
+        arr2 = [2, 1, 4, 3, 9, 6]
+        cases = [[[], []], [arr1, []], [arr1, arr2]]
+        return cases
 
     def generate_two_arr(self):
         nums1 = [1, 2, 2, 1]
@@ -62,4 +87,5 @@ class Sort:
 
 if __name__ == '__main__':
     sort = Sort()
-    format_test(sort.intersection, sort.generate_two_arr)
+    # format_test(sort.intersection, sort.generate_two_arr)
+    format_test(sort.relativeSortArray, sort.generate_relative_sort_arr)
